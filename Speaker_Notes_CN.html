@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>演讲备注 — 现金流管理工具评审会议</title>
+<style>
+  @page { size: A4 portrait; margin: 20mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'PingFang SC', 'Microsoft YaHei', 'Inter', sans-serif; background: #f8fafc; color: #1e293b; font-size: 13px; line-height: 1.7; }
+
+  .page { max-width: 720px; margin: 0 auto; padding: 32px 0 0; }
+
+  .doc-title { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+  .doc-meta { font-size: 12px; color: #94a3b8; margin-bottom: 32px; }
+
+  .slide-block {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+
+  .slide-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #f8fafc;
+  }
+  .slide-badge {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #10b981;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .slide-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+  .slide-time { margin-left: auto; font-size: 11px; color: #94a3b8; font-weight: 500; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
+
+  .slide-body { padding: 16px 20px 18px; }
+
+  .notes-section { margin-bottom: 14px; }
+  .notes-section:last-child { margin-bottom: 0; }
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: #94a3b8;
+    margin-bottom: 7px;
+  }
+
+  .note-item {
+    display: flex; gap: 8px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+  }
+  .note-bullet {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #10b981; margin-top: 7px; flex-shrink: 0;
+  }
+  .note-text { font-size: 13px; color: #334155; line-height: 1.65; }
+  .note-text strong { color: #0f172a; font-weight: 600; }
+
+  .tip-box {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 7px; padding: 10px 14px; margin-top: 10px;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .tip-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .tip-text { font-size: 12px; color: #92400e; line-height: 1.55; }
+  .tip-text strong { font-weight: 600; }
+
+  .q-box {
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 7px; padding: 10px 14px; margin-top: 10px;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .q-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .q-text { font-size: 12px; color: #1e40af; line-height: 1.55; }
+  .q-text strong { font-weight: 600; }
+
+  .divider { height: 1px; background: #f1f5f9; margin: 12px 0; }
+
+  @media screen {
+    body { padding: 24px; background: #f0f2f5; }
+    .page { padding: 24px 0 48px; }
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-title">演讲备注</div>
+  <div class="doc-meta">现金流管理工具 — 原型评审会议 &nbsp;|&nbsp; 2026年7月3日 &nbsp;|&nbsp; 仅供演讲者参考</div>
+
+  <!-- ── 第1页：封面 ── -->
+  <div class="slide-block">
+    <div class="slide-header">
+      <div class="slide-badge">1</div>
+      <div class="slide-title">封面 — 开场介绍</div>
+      <div class="slide-time">约 1 分钟</div>
+    </div>
+    <div class="slide-body">
+      <div class="notes-section">
+        <div class="section-label">说什么</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">感谢各位参会，简单说明今天的目的："今天我们三方聚在一起，是要对这个现金流管理工具的原型做一次全面的评审，最终希望能对工具的方向达成共识。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">简单介绍自己的角色：这个原型是 PMO 发起的，目的是解决我们日常工作中遇到的一些实际问题。</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">说明今天财务部和开发部的角色：财务部帮我们确认数据和逻辑是否正确，开发部判断技术上是否可行。</div></div>
+      </div>
+      <div class="tip-box">
+        <div class="tip-icon">💡</div>
+        <div class="tip-text"><strong>小提示：</strong>开场时说话放慢，让大家有时间调整状态。不需要展开太多，快速进入议程页。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 第2页：议程 ── -->
+  <div class="slide-block">
+    <div class="slide-header">
+      <div class="slide-badge">2</div>
+      <div class="slide-title">会议议程</div>
+      <div class="slide-time">约 1 分钟</div>
+    </div>
+    <div class="slide-body">
+      <div class="notes-section">
+        <div class="section-label">说什么</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">简单过一遍议程："我们今天总共大约60分钟，分5个环节。前面25分钟是我来介绍背景并做现场演示，后面分别请财务部和开发部给反馈，最后10分钟我们一起来确定最终方向。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">强调今天的目标是<strong>形成共识</strong>，不是做最终决定，也不是汇报，而是一起讨论。</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">告知大家可以随时举手提问，但具体的技术和数据问题留到各自的讨论环节会更有效率。</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 第3页：痛点 ── -->
+  <div class="slide-block">
+    <div class="slide-header">
+      <div class="slide-badge">3</div>
+      <div class="slide-title">背景与问题陈述 — PMO 当前面临的挑战</div>
+      <div class="slide-time">约 4 分钟</div>
+    </div>
+    <div class="slide-body">
+      <div class="notes-section">
+        <div class="section-label">逐点说明</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text"><strong>数据分散：</strong>"目前每个项目经理都在维护自己的 Excel 台账。PMO 如果要看全局，就要手动把所有文件合并，费时费力，而且很容易出错。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text"><strong>风险发现滞后：</strong>"逾期发票、资金缺口这些问题，往往是在已经发生了之后才知道。我们缺乏一个能提前预警的机制。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text"><strong>无法按 PM 监控：</strong>"我们没有办法快速看到某一个项目经理名下，有哪些应收账款没有收回来，或者哪个项目的现金流出现了问题。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text"><strong>没有预测视图：</strong>"没有一个向前看的工具，我们很难提前规划资金安排，只能被动应对。"</div></div>
+      </div>
+      <div class="q-box">
+        <div class="q-icon">💬</div>
+        <div class="q-text"><strong>可以问大家：</strong>"这几个问题，财务部这边有没有类似的感受？有没有什么我漏掉的痛点？" — 这样可以拉近距离，也让财务部有参与感。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 第4页：解决方案 ── -->
+  <div class="slide-block">
+    <div class="slide-header">
+      <div class="slide-badge">4</div>
+      <div class="slide-title">解决方案 — 工具核心能力</div>
+      <div class="slide-time">约 2 分钟</div>
+    </div>
+    <div class="slide-body">
+      <div class="notes-section">
+        <div class="section-label">说什么</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">不需要逐条细读，简单带过："这个工具从5个维度来解决刚才说的那些问题——统一看板、PM筛选、应收管理、滚动预测，还有完整的收支台账。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">重点强调 <strong>PM 筛选功能</strong>：这是贯穿全部模块的核心特性，也是这个工具区别于普通报表的关键点。</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">右侧数字卡可以帮助说明规模："目前原型有10个示例项目、5位项目经理、7个联动模块，接下来演示中大家都会看到。"</div></div>
+      </div>
+      <div class="tip-box">
+        <div class="tip-icon">💡</div>
+        <div class="tip-text"><strong>节奏提示：</strong>这一页控制在2分钟以内，细节留给演示环节讲，不要在这里展开。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 第5页：7个模块 ── -->
+  <div class="slide-block">
+    <div class="slide-header">
+      <div class="slide-badge">5</div>
+      <div class="slide-title">原型演示 — 7个模块总览（演示前导入）</div>
+      <div class="slide-time">约 2 分钟 + 演示 18 分钟</div>
+    </div>
+    <div class="slide-body">
+      <div class="notes-section">
+        <div class="section-label">演示前说什么</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">"在进入演示之前，我先把7个模块快速介绍一下，这样大家知道我们接下来要看什么。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">从左到右、从上到下简单扫一遍模块名称，不需要解释每个功能细节，演示时再讲。</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">指向右侧 PM 筛选框："特别注意这个功能——所有模块都支持按项目经理筛选，这是整个工具的核心亮点之一。"</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="notes-section">
+        <div class="section-label">演示建议顺序</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">① 全局总览（看总体KPI和图表）→ ② 切换 PM 筛选器（让大家看到PM维度效果）→ ③ 项目详情（点进一个项目）→ ④ 应收账款（账龄和集中度）→ ⑤ 月度预测（12个月视图 + YTD进度表）</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">在月度预测页，重点展示页面底部的 <strong>YTD 收入与成本进度表</strong>："这张表可以直接看出哪个项目的成本消耗速度比回款速度快——橙色进度条明显高于蓝色的，就是需要关注的项目。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">收支明细和应付账款可以快速带过，不需要每个都深讲，总时间控制在18分钟内。</div></div>
+      </div>
+      <div class="q-box">
+        <div class="q-icon">💬</div>
+        <div class="q-text"><strong>演示结束后可以说：</strong>"以上是完整的原型演示。在进入财务部讨论之前，有没有什么初步的问题？"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 第6页：数据 ── -->
+  <div class="slide-block">
+    <div class="slide-header">
+      <div class="slide-badge">6</div>
+      <div class="slide-title">数据说明 — 引出财务部讨论</div>
+      <div class="slide-time">约 3 分钟</div>
+    </div>
+    <div class="slide-body">
+      <div class="notes-section">
+        <div class="section-label">说什么</div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">"这一页展示的是工具需要用到的数据结构，分两类：项目基础数据和收支记录数据。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">"大家可以看到，数据字段其实并不复杂——项目侧主要是基本信息，收支侧主要是每笔交易的日期、金额、类型和状态。"</div></div>
+        <div class="note-item"><div class="note-bullet"></div><div class="note-text">指向右侧"待确认事项"：<strong>"最关键的问题是：这些数据目前在公司哪个系统里？这需要财务部来告诉我们。"</strong> 这样自然过渡到议程第3项。</div></div>
+      </div>
+      <div class="tip-box">
+        <div class="tip-icon">💡</div>
+        <div class="tip-text"><strong>过渡语：</strong>"好，到这里背景和演示部分就结束了。接下来我们请财务部来看一下，这些数据字段和计算逻辑是不是符合你们的标准？"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 通用提示 ── -->
+  <div class="slide-block" style="border-color:#bbf7d0;">
+    <div class="slide-header" style="background:#f0fdf4;">
+      <div class="slide-badge" style="background:#059669;">★</div>
+      <div class="slide-title" style="color:#166534;">会议整体节奏提示</div>
+    </div>
+    <div class="slide-body">
+      <div class="note-item"><div class="note-bullet"></div><div class="note-text">演示时如果遇到问题或 bug，不要慌，可以说"这是原型阶段，具体功能在开发时会完善"，然后继续。</div></div>
+      <div class="note-item"><div class="note-bullet"></div><div class="note-text">财务部和开发部讨论时，你的角色是<strong>记录</strong>，不是辩解。把反馈写下来，结束时确认理解是否一致。</div></div>
+      <div class="note-item"><div class="note-bullet"></div><div class="note-text">第5项"确定目标版本"时，主动归纳："我听到的主要修改点有这几个……大家确认一下对吗？"帮助会议有明确收尾。</div></div>
+      <div class="note-item"><div class="note-bullet"></div><div class="note-text">如果时间超了，优先保证第5项的时间——<strong>没有共识就是没有成果</strong>。</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="no-print" style="text-align:center;padding:20px 0 48px;">
+  <button onclick="window.print()" style="padding:10px 28px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
+    打印 / 保存为 PDF
+  </button>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Flow Management Tool — Meeting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #f0f2f5; }
+
+  .slide {
+    width: 297mm; height: 210mm;
+    background: #fff;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .slide::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 8px; height: 100%;
+    background: linear-gradient(180deg, #10b981, #0ea5e9);
+  }
+  .slide-footer {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 36px; background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex; align-items: center;
+    padding: 0 28px 0 24px;
+    font-size: 11px; color: #94a3b8;
+    justify-content: space-between;
+  }
+
+  /* ── SLIDE 1 ── */
+  .s1 { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); }
+  .s1::before { background: linear-gradient(180deg, #10b981, #0ea5e9); }
+  .s1-body { padding: 44px 56px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .s1-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: #10b981; text-transform: uppercase; margin-bottom: 20px; }
+  .s1-title { font-size: 46px; font-weight: 800; color: #fff; line-height: 1.15; margin-bottom: 14px; }
+  .s1-subtitle { font-size: 18px; color: #94a3b8; margin-bottom: 36px; }
+  .s1-meta { display: flex; gap: 32px; }
+  .s1-meta-item { display: flex; flex-direction: column; gap: 3px; }
+  .s1-meta-item span:first-child { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+  .s1-meta-item span:last-child { font-size: 14px; color: #cbd5e1; font-weight: 500; }
+  .s1-deco { position: absolute; right: -60px; top: -60px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%); }
+  .s1-deco2 { position: absolute; right: 80px; bottom: 40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%); }
+  .s1-footer { background: rgba(255,255,255,0.05); border-top: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.3); }
+
+  /* ── SLIDE 2 ── */
+  .s2-header { padding: 32px 28px 20px 32px; border-bottom: 1px solid #f1f5f9; }
+  .s2-header h2 { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #10b981; margin-bottom: 4px; }
+  .s2-header h1 { font-size: 28px; font-weight: 700; color: #0f172a; }
+  .s2-body { padding: 20px 28px 48px 32px; flex: 1; display: flex; align-items: center; }
+  .s2-wrap { width: 100%; }
+  .agenda-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .agenda-num { width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; color: #64748b; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .agenda-num.active { background: #10b981; color: #fff; }
+  .agenda-content { flex: 1; }
+  .agenda-title { font-size: 15px; font-weight: 600; color: #0f172a; }
+  .agenda-title.active { color: #10b981; }
+  .agenda-desc { font-size: 12px; color: #64748b; margin-top: 1px; }
+  .agenda-time { font-size: 12px; color: #94a3b8; font-weight: 500; white-space: nowrap; padding-top: 4px; }
+  .agenda-divider { height: 1px; background: #f1f5f9; margin: 2px 0 2px 42px; }
+  .total-row { display: flex; justify-content: flex-end; padding-right: 4px; margin-top: 8px; }
+  .total-tag { font-size: 12px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 4px; }
+  .outcome-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-top: 16px; margin-left: 42px; }
+  .outcome-box p { font-size: 12px; color: #166534; }
+  .outcome-box p strong { font-weight: 600; }
+
+  /* ── SLIDE 3 ── */
+  .s3-header { padding: 32px 28px 16px 32px; }
+  .s3-header h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #ef4444; margin-bottom: 4px; }
+  .s3-header h1 { font-size: 26px; font-weight: 700; color: #0f172a; }
+  .s3-body { padding: 4px 28px 48px 32px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .pain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .pain-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .pain-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .pain-icon.red    { background: #fef2f2; }
+  .pain-icon.amber  { background: #fffbeb; }
+  .pain-icon.blue   { background: #eff6ff; }
+  .pain-icon.purple { background: #faf5ff; }
+  .pain-title { font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 3px; }
+  .pain-desc  { font-size: 11.5px; color: #64748b; line-height: 1.55; }
+
+  /* ── SLIDE 4 ── */
+  .s4-header { padding: 32px 28px 16px 32px; }
+  .s4-header h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #10b981; margin-bottom: 4px; }
+  .s4-header h1 { font-size: 26px; font-weight: 700; color: #0f172a; }
+  .s4-body { padding: 4px 28px 48px 32px; flex: 1; display: flex; gap: 20px; align-items: center; }
+  .s4-left { flex: 1; }
+  .s4-right { width: 200px; display: flex; flex-direction: column; gap: 10px; }
+  .value-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .check-circle { width: 24px; height: 24px; border-radius: 50%; background: #d1fae5; color: #059669; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .value-text { font-size: 13px; color: #1e293b; line-height: 1.6; }
+  .value-text strong { color: #0f172a; font-weight: 600; }
+  .stat-box { background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 800; color: #059669; }
+  .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #bfdbfe; }
+  .stat-box.blue .stat-num { color: #2563eb; }
+  .stat-box.amber { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: #fde68a; }
+  .stat-box.amber .stat-num { color: #d97706; }
+
+  /* ── SLIDE 5 ── */
+  .s5-header { padding: 28px 28px 12px 32px; }
+  .s5-header h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #10b981; margin-bottom: 4px; }
+  .s5-header h1 { font-size: 26px; font-weight: 700; color: #0f172a; }
+  .s5-body { padding: 4px 28px 44px 32px; flex: 1; display: flex; gap: 16px; align-items: flex-start; }
+  .module-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex: 1; }
+  .module-card { border-radius: 10px; padding: 14px 12px; border: 1px solid transparent; }
+  .module-card.green  { background: #f0fdf4; border-color: #bbf7d0; }
+  .module-card.blue   { background: #eff6ff; border-color: #bfdbfe; }
+  .module-card.violet { background: #f5f3ff; border-color: #ddd6fe; }
+  .module-card.amber  { background: #fffbeb; border-color: #fde68a; }
+  .module-card.rose   { background: #fff1f2; border-color: #fecdd3; }
+  .module-card.teal   { background: #f0fdfa; border-color: #99f6e4; }
+  .module-card.sky    { background: #f0f9ff; border-color: #bae6fd; }
+  .module-icon { font-size: 22px; margin-bottom: 6px; }
+  .module-name { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 5px; }
+  .module-desc { font-size: 10.5px; color: #475569; line-height: 1.4; }
+  .s5-right { width: 150px; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+  .pm-box { background: linear-gradient(135deg, #1e3a5f, #0f172a); border-radius: 10px; padding: 14px; color: #fff; }
+  .pm-box h4 { font-size: 11px; font-weight: 600; color: #10b981; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .pm-box p { font-size: 11px; color: #cbd5e1; line-height: 1.5; }
+  .pm-box .pm-names { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .pm-tag { background: rgba(16,185,129,0.2); color: #6ee7b7; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
+
+  /* ── SLIDE 6 ── */
+  .s6-header { padding: 32px 28px 16px 32px; }
+  .s6-header h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #0ea5e9; margin-bottom: 4px; }
+  .s6-header h1 { font-size: 26px; font-weight: 700; color: #0f172a; }
+  .s6-body { padding: 4px 28px 48px 32px; flex: 1; display: flex; gap: 20px; align-items: flex-start; }
+  .data-col { flex: 1; }
+  .data-col h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+  .field-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f8fafc; }
+  .field-name { font-size: 12.5px; color: #1e293b; font-weight: 500; }
+  .field-type { font-size: 10.5px; color: #94a3b8; background: #f1f5f9; padding: 2px 7px; border-radius: 4px; }
+  .field-type.key { background: #dcfce7; color: #16a34a; }
+  .data-divider { width: 1px; background: #e2e8f0; margin: 0 4px; }
+  .note-box { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-top: 14px; }
+  .note-box p { font-size: 11.5px; color: #92400e; line-height: 1.5; }
+  .note-box p strong { font-weight: 600; }
+
+  @media screen {
+    body { padding: 24px; }
+    .slide { margin: 0 auto 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.12); border-radius: 4px; }
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .slide { box-shadow: none; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<div class="slide s1">
+  <div class="s1-deco"></div>
+  <div class="s1-deco2"></div>
+  <div class="s1-body">
+    <div class="s1-label">Prototype Review Meeting</div>
+    <div class="s1-title">Cash Flow<br>Management Tool</div>
+    <div class="s1-subtitle">A tool to help PMO track project cash flow</div>
+    <div class="s1-meta">
+      <div class="s1-meta-item">
+        <span>Date</span>
+        <span>July 3, 2026</span>
+      </div>
+      <div class="s1-meta-item">
+        <span>Attendees</span>
+        <span>PMO &nbsp;·&nbsp; Finance &nbsp;·&nbsp; Dev Team</span>
+      </div>
+      <div class="s1-meta-item">
+        <span>Duration</span>
+        <span>~60 minutes</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer s1-footer">
+    <span>Internal — For Discussion Only</span>
+    <span>1 / 6</span>
+  </div>
+</div>
+
+<!-- SLIDE 2: Agenda -->
+<div class="slide">
+  <div class="s2-header">
+    <h2>Today's Meeting</h2>
+    <h1>Agenda</h1>
+  </div>
+  <div class="s2-body">
+    <div class="s2-wrap">
+      <div class="agenda-row">
+        <div class="agenda-num active">1</div>
+        <div class="agenda-content">
+          <div class="agenda-title active">Background &amp; Problem</div>
+          <div class="agenda-desc">Why we built this tool and what problems it solves</div>
+        </div>
+        <div class="agenda-time">5 min</div>
+      </div>
+      <div class="agenda-divider"></div>
+      <div class="agenda-row">
+        <div class="agenda-num active">2</div>
+        <div class="agenda-content">
+          <div class="agenda-title active">Live Demo</div>
+          <div class="agenda-desc">Walk through all 7 modules of the prototype</div>
+        </div>
+        <div class="agenda-time">20 min</div>
+      </div>
+      <div class="agenda-divider"></div>
+      <div class="agenda-row">
+        <div class="agenda-num">3</div>
+        <div class="agenda-content">
+          <div class="agenda-title">Finance Review</div>
+          <div class="agenda-desc">Are the data fields and calculations correct?</div>
+        </div>
+        <div class="agenda-time">10 min</div>
+      </div>
+      <div class="agenda-divider"></div>
+      <div class="agenda-row">
+        <div class="agenda-num">4</div>
+        <div class="agenda-content">
+          <div class="agenda-title">Dev Review</div>
+          <div class="agenda-desc">Is this feasible to build? What are the requirements?</div>
+        </div>
+        <div class="agenda-time">15 min</div>
+      </div>
+      <div class="agenda-divider"></div>
+      <div class="agenda-row">
+        <div class="agenda-num">5</div>
+        <div class="agenda-content">
+          <div class="agenda-title">Agree on Final Version</div>
+          <div class="agenda-desc">What needs to change before we lock the design?</div>
+        </div>
+        <div class="agenda-time">10 min</div>
+      </div>
+      <div class="total-row">
+        <div class="total-tag">Total: ~60 min</div>
+      </div>
+      <div class="outcome-box">
+        <p><strong>Goal:</strong> By the end of this meeting, Finance and Dev both agree on a version of the prototype to move forward with.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>Cash Flow Management Tool — Prototype Review</span>
+    <span>2 / 6</span>
+  </div>
+</div>
+
+<!-- SLIDE 3: Problem -->
+<div class="slide">
+  <div class="s3-header">
+    <h2>The Problem</h2>
+    <h1>What PMO Struggles With Today</h1>
+  </div>
+  <div class="s3-body">
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon red">📊</div>
+        <div>
+          <div class="pain-title">Data is Scattered Everywhere</div>
+          <div class="pain-desc">Each project has its own Excel file. PMO has to manually combine them to see the full picture — which is slow and error-prone.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon amber">⚠️</div>
+        <div>
+          <div class="pain-title">Problems Are Found Too Late</div>
+          <div class="pain-desc">Overdue invoices and cash shortfalls are only noticed after they happen. There is no early warning when something is going wrong.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon blue">👤</div>
+        <div>
+          <div class="pain-title">No Way to Track Each PM's Performance</div>
+          <div class="pain-desc">PMO cannot quickly check which Project Manager has late payments, unpaid invoices, or cash flow issues across their projects.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon purple">🔮</div>
+        <div>
+          <div class="pain-title">No Forward-Looking Cash View</div>
+          <div class="pain-desc">Without a 12-month forecast, Finance and PMO cannot plan ahead for cash gaps or decide when to speed up collections or delay payments.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>Cash Flow Management Tool — Prototype Review</span>
+    <span>3 / 6</span>
+  </div>
+</div>
+
+<!-- SLIDE 4: Solution -->
+<div class="slide">
+  <div class="s4-header">
+    <h2>The Solution</h2>
+    <h1>What This Tool Does</h1>
+  </div>
+  <div class="s4-body">
+    <div class="s4-left">
+      <div class="value-row">
+        <div class="check-circle">✓</div>
+        <div class="value-text"><strong>One place for all project cash data</strong> — see the full portfolio at a glance: net cash, overdue AR, upcoming payments, and at-risk projects.</div>
+      </div>
+      <div class="value-row">
+        <div class="check-circle">✓</div>
+        <div class="value-text"><strong>Filter by Project Manager on every page</strong> — PMO can instantly switch to any PM's view to check their cash situation.</div>
+      </div>
+      <div class="value-row">
+        <div class="check-circle">✓</div>
+        <div class="value-text"><strong>AR tracking with DSO and aging</strong> — see which clients owe money, how long it has been outstanding, and collection speed.</div>
+      </div>
+      <div class="value-row">
+        <div class="check-circle">✓</div>
+        <div class="value-text"><strong>12-month cash forecast</strong> — see expected cash in and out each month, with a drill-down into each project.</div>
+      </div>
+      <div class="value-row">
+        <div class="check-circle">✓</div>
+        <div class="value-text"><strong>Full transaction log</strong> — every cash entry is searchable by project, type, status, and date.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>Cash Flow Management Tool — Prototype Review</span>
+    <span>4 / 6</span>
+  </div>
+</div>
+
+<!-- SLIDE 5: Modules -->
+<div class="slide">
+  <div class="s5-header">
+    <h2>Live Demo</h2>
+    <h1>7 Modules at a Glance</h1>
+  </div>
+  <div class="s5-body">
+    <div class="module-grid">
+      <div class="module-card green">
+        <div class="module-icon">🏠</div>
+        <div class="module-name">Dashboard</div>
+        <div class="module-desc">Portfolio KPIs, cash flow chart, alerts, upcoming payments</div>
+      </div>
+      <div class="module-card blue">
+        <div class="module-icon">📋</div>
+        <div class="module-name">Project List</div>
+        <div class="module-desc">All projects with status, contract value, region, PM</div>
+      </div>
+      <div class="module-card violet">
+        <div class="module-icon">📈</div>
+        <div class="module-name">Project Detail</div>
+        <div class="module-desc">Cash flow chart and transaction history per project</div>
+      </div>
+      <div class="module-card teal">
+        <div class="module-icon">📒</div>
+        <div class="module-name">Transactions</div>
+        <div class="module-desc">Full ledger — filter by project, type, date, status, PM</div>
+      </div>
+      <div class="module-card amber">
+        <div class="module-icon">🔮</div>
+        <div class="module-name">Monthly Forecast</div>
+        <div class="module-desc">12-month rolling forecast matrix and chart, plus YTD revenue vs. cost progress tracker per project</div>
+      </div>
+      <div class="module-card sky">
+        <div class="module-icon">💰</div>
+        <div class="module-name">Accounts Receivable</div>
+        <div class="module-desc">AR aging, DSO, client concentration (unpaid only)</div>
+      </div>
+      <div class="module-card rose">
+        <div class="module-icon">💳</div>
+        <div class="module-name">Accounts Payable</div>
+        <div class="module-desc">AP tracking, upcoming and overdue payments</div>
+      </div>
+    </div>
+    <div class="s5-right">
+      <div class="pm-box">
+        <h4>PM Filter</h4>
+        <p>Every module can be filtered by PM. Switch views instantly to monitor any Project Manager.</p>
+        <div class="pm-names">
+          <span class="pm-tag">张三</span>
+          <span class="pm-tag">李四</span>
+          <span class="pm-tag">王五</span>
+          <span class="pm-tag">赵六</span>
+          <span class="pm-tag">陈七</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>Cash Flow Management Tool — Prototype Review</span>
+    <span>5 / 6</span>
+  </div>
+</div>
+
+<!-- SLIDE 6: Data -->
+<div class="slide">
+  <div class="s6-header">
+    <h2>Data</h2>
+    <h1>What Data the Tool Needs</h1>
+  </div>
+  <div class="s6-body">
+    <div class="data-col">
+      <h3>Project Data</h3>
+      <div class="field-row"><span class="field-name">Project ID &amp; Number</span><span class="field-type key">Key</span></div>
+      <div class="field-row"><span class="field-name">Project Name</span><span class="field-type">Text</span></div>
+      <div class="field-row"><span class="field-name">Client</span><span class="field-type">Text</span></div>
+      <div class="field-row"><span class="field-name">Region</span><span class="field-type">Enum</span></div>
+      <div class="field-row"><span class="field-name">Project Manager</span><span class="field-type">Text</span></div>
+      <div class="field-row"><span class="field-name">Status</span><span class="field-type">Enum</span></div>
+      <div class="field-row"><span class="field-name">Contract Value (CNY)</span><span class="field-type">Number</span></div>
+      <div class="field-row"><span class="field-name">Start &amp; End Date</span><span class="field-type">Date</span></div>
+    </div>
+    <div class="data-divider"></div>
+    <div class="data-col">
+      <h3>Cash Entry Data</h3>
+      <div class="field-row"><span class="field-name">Entry ID</span><span class="field-type key">Key</span></div>
+      <div class="field-row"><span class="field-name">Project ID (linked)</span><span class="field-type key">FK</span></div>
+      <div class="field-row"><span class="field-name">Date</span><span class="field-type">Date</span></div>
+      <div class="field-row"><span class="field-name">Type (invoice / receipt / expense)</span><span class="field-type">Enum</span></div>
+      <div class="field-row"><span class="field-name">Direction (in / out)</span><span class="field-type">Enum</span></div>
+      <div class="field-row"><span class="field-name">Currency &amp; Amount</span><span class="field-type">Number</span></div>
+      <div class="field-row"><span class="field-name">CNY Amount (converted)</span><span class="field-type">Number</span></div>
+      <div class="field-row"><span class="field-name">Counterpart</span><span class="field-type">Text</span></div>
+      <div class="field-row"><span class="field-name">Due Date</span><span class="field-type">Date</span></div>
+      <div class="field-row"><span class="field-name">Status (confirmed / pending / overdue)</span><span class="field-type">Enum</span></div>
+    </div>
+    <div style="width:1px;background:#e2e8f0;margin:0 4px;"></div>
+    <div class="data-col" style="max-width:175px;">
+      <h3>Open Question</h3>
+      <p style="font-size:12.5px;color:#475569;line-height:1.7;">Where does this data currently live in the company?</p>
+      <br>
+      <p style="font-size:12px;color:#64748b;line-height:1.6;">Finance team to confirm in agenda item 3.</p>
+      <div class="note-box" style="margin-top:14px;">
+        <p><strong>Note:</strong> The prototype uses sample data. The real data source will be confirmed after this meeting.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>Cash Flow Management Tool — Prototype Review</span>
+    <span>6 / 6</span>
+  </div>
+</div>
+
+<div class="no-print" style="text-align:center;padding:20px 0 40px;">
+  <button onclick="window.print()" style="padding:10px 28px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
+    Print / Save as PDF
+  </button>
+</div>
+
+</body>
+</html>

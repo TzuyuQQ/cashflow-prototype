@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>月度预测 — GCF</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <style>
+    * { box-sizing:border-box;margin:0;padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5; }
+    .top-nav { position:fixed;top:0;left:0;right:0;height:48px;background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;padding:0 12px;z-index:1000;gap:8px; }
+    .nav-hamburger { font-size:18px;color:#909399;cursor:pointer;padding:0 4px; }
+    .nav-logo { display:flex;align-items:center;gap:2px;margin-right:10px; }
+    .nav-logo-text { color:#1677ff;font-weight:bold;font-size:16px; }
+    .nav-logo-plus { background:#ff7a00;color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;line-height:1; }
+    .nav-tabs { display:flex;align-items:center;gap:4px;flex:1; }
+    .nav-tab { font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;color:#606266;white-space:nowrap; }
+    .nav-tab.active { background:#ff7a00;color:#fff; }
+    .nav-tab.outline-green { border:1px solid #67c23a;color:#67c23a; }
+    .nav-right { display:flex;align-items:center;gap:10px;margin-left:8px; }
+    .nav-icon { font-size:16px;color:#606266;cursor:pointer; }
+    .nav-todo { position:relative;cursor:pointer;font-size:13px;color:#606266; }
+    .nav-badge { position:absolute;top:-8px;right:-28px;background:#f56c6c;color:#fff;font-size:10px;padding:1px 4px;border-radius:8px;white-space:nowrap; }
+    .nav-arrow { font-size:12px;color:#909399;margin-left:32px; }
+    .nav-avatar { width:26px;height:26px;border-radius:50%;background:#c0c4cc;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;cursor:pointer; }
+    .nav-admin-btn { border:1px solid #1677ff;color:#1677ff;background:transparent;padding:3px 10px;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap; }
+    .sidebar { position:fixed;top:48px;left:0;bottom:0;width:200px;background:#1a5fa0;display:flex;flex-direction:column;z-index:900;overflow-y:auto; }
+    .sidebar-header { padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+    .sidebar-logo-txt { font-size:20px;font-weight:700;color:#fff;letter-spacing:3px; }
+    .sidebar-hamburger-btn { font-size:18px;color:rgba(255,255,255,0.7);cursor:pointer; }
+    .sidebar-group { margin-top:4px; }
+    .sidebar-group-title { padding:10px 16px 4px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:1.5px;text-transform:uppercase; }
+    .sidebar-nav-item { display:flex;align-items:center;gap:8px;padding:9px 16px;font-size:13px;color:rgba(255,255,255,0.85);cursor:pointer;transition:background 0.15s;border-left:3px solid transparent;text-decoration:none; }
+    .sidebar-nav-item:hover { background:rgba(255,255,255,0.1);color:#fff; }
+    .sidebar-nav-item.active { background:rgba(255,255,255,0.18);color:#fff;border-left-color:#fff;font-weight:600; }
+    .sni-icon { font-size:14px;width:18px;text-align:center;flex-shrink:0; }
+    .main-wrapper { margin-left:200px;margin-top:48px; }
+    .breadcrumb-bar { height:40px;background:#fff;border-bottom:1px solid #e4e7ed;padding:0 20px;display:flex;align-items:center;font-size:13px;color:#909399; }
+    .breadcrumb-bar .sep { margin:0 6px; }
+    .breadcrumb-bar a { color:#909399;text-decoration:none; }
+    .breadcrumb-bar a:hover { color:#1677ff; }
+    .breadcrumb-bar .current { color:#303133; }
+    .content-area { padding:16px 20px; }
+    .card { background:#fff;border-radius:4px;padding:16px 20px;margin-bottom:12px; }
+    .card-title { font-size:14px;font-weight:600;color:#303133;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between; }
+
+    /* KPI Strip */
+    .kpi-strip { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px; }
+    .kpi-card { background:#fff;border-radius:4px;padding:14px 18px;border-top:3px solid transparent; }
+    .kpi-card.c1 { border-top-color:#1677ff; }
+    .kpi-card.c2 { border-top-color:#ff7a00; }
+    .kpi-card.c3 { border-top-color:#722ed1; }
+    .kpi-card.c4 { border-top-color:#52c41a; }
+    .kpi-label { font-size:12px;color:#909399;margin-bottom:5px; }
+    .kpi-value { font-size:20px;font-weight:700;color:#303133; }
+    .kpi-value.positive { color:#52c41a; }
+    .kpi-value.negative { color:#f56c6c; }
+
+    /* Forecast matrix */
+    .forecast-scroll { overflow-x:auto; }
+    .forecast-table { width:100%;border-collapse:collapse;min-width:900px; }
+    .forecast-table th, .forecast-table td { border:1px solid #e4e7ed;padding:0; }
+    .forecast-table th { background:#f5f7fa;color:#606266;font-weight:600;font-size:12px;padding:10px 12px;text-align:center;white-space:nowrap; }
+    .forecast-table th.proj-col { text-align:left;min-width:180px;width:180px; }
+    .forecast-table th.month-col { min-width:120px;width:140px; }
+    .forecast-table th.current-month { background:#e6f4ff; }
+    .forecast-table th .month-label { font-size:13px;color:#303133;font-weight:700; }
+    .forecast-table th .month-sub { font-size:10px;color:#909399;margin-top:2px; }
+    .forecast-table th .month-sub.now { color:#1677ff;font-weight:600; }
+
+    /* project name cell */
+    .proj-cell { padding:12px 14px;display:flex;flex-direction:column;gap:3px;background:#fff; }
+    .proj-name { font-size:12px;font-weight:600;color:#303133;line-height:1.3; }
+    .proj-sub  { font-size:11px;color:#909399; }
+    .proj-cell.total-row { background:#f5f7fa; }
+    .proj-cell.total-row .proj-name { font-size:13px; }
+
+    /* data cell */
+    .data-cell { padding:10px 10px;display:flex;flex-direction:column;gap:3px;background:#fff;height:100%; }
+    .data-cell.has-activity { background:#fafcff; }
+    .data-cell.current-col { background:#f0f7ff; }
+    .data-cell.future-col  { background:#fafafa; }
+    .data-cell.total-row   { background:#f5f7fa; }
+
+    .cell-inflow          { font-size:11px;color:#1677ff;display:flex;align-items:center;gap:3px; }
+    .cell-inflow-forecast { font-size:11px;color:#91caff;display:flex;align-items:center;gap:3px; }
+    .cell-outflow          { font-size:11px;color:#ff7a00;display:flex;align-items:center;gap:3px; }
+    .cell-outflow-forecast { font-size:11px;color:#ffc069;display:flex;align-items:center;gap:3px; }
+    .cell-net     { font-size:12px;font-weight:700;margin-top:2px;padding-top:4px;border-top:1px solid #f0f2f5; }
+    .cell-net.positive { color:#52c41a; }
+    .cell-net.negative { color:#f56c6c; }
+    .cell-net.zero     { color:#c0c4cc; }
+    .cell-empty { color:#e4e7ed;font-size:12px;text-align:center;padding:16px 0; }
+    .balance-row td { background:#f0fff4 !important; }
+    .balance-row .data-cell { background:#f0fff4; }
+    .balance-val { font-size:12px;font-weight:700;color:#13c2c2;text-align:center;padding:10px; }
+
+    .pending-tag { font-size:10px;background:#fffbe6;color:#d48806;padding:0 4px;border-radius:3px;margin-left:2px; }
+
+    /* status badge */
+    .st-active    { background:#e6f4ff;color:#1677ff;font-size:10px;padding:1px 5px;border-radius:8px; }
+    .st-at-risk   { background:#fff2f0;color:#f56c6c;border:1px solid #ffccc7;font-size:10px;padding:1px 5px;border-radius:8px; }
+    .st-on-hold   { background:#f5f5f5;color:#909399;font-size:10px;padding:1px 5px;border-radius:8px; }
+    .st-completed { background:#f6ffed;color:#52c41a;font-size:10px;padding:1px 5px;border-radius:8px; }
+    #forecast-chart { height:240px;width:100%;margin-bottom:0; }
+    .clickable-cell { cursor:pointer; }
+    .clickable-cell:hover .data-cell { background:#e6f4ff !important; }
+  /* ── YTD Progress Table ── */
+  .ytd-table { width:100%;border-collapse:collapse;font-size:12.5px; }
+  .ytd-table th { background:#f5f7fa;color:#606266;font-weight:600;font-size:11px;padding:9px 12px;text-align:left;border-bottom:2px solid #e4e7ed;white-space:nowrap; }
+  .ytd-table td { padding:9px 12px;border-bottom:1px solid #f0f2f5;vertical-align:middle; }
+  .ytd-table tbody tr:hover { background:#fafcff; }
+  .ytd-table .total-row td { background:#f5f7fa;font-weight:600; }
+  .ytd-proj-name { font-weight:600;color:#303133;font-size:12px; }
+  .ytd-proj-sub  { font-size:11px;color:#909399;margin-top:2px; }
+  .progress-wrap { display:flex;align-items:center;gap:8px; }
+  .progress-bar-bg { flex:1;height:6px;background:#e4e7ed;border-radius:3px;overflow:hidden;min-width:80px; }
+  .progress-bar-fill { height:100%;border-radius:3px; }
+  .progress-bar-fill.rev  { background:#1677ff; }
+  .progress-bar-fill.cost { background:#ff7a00; }
+  .progress-bar-fill.over { background:#f56c6c; }
+  .progress-pct { font-size:11px;font-weight:700;white-space:nowrap;min-width:32px; }
+  .progress-pct.low  { color:#52c41a; }
+  .progress-pct.mid  { color:#1677ff; }
+  .progress-pct.high { color:#ff7a00; }
+  .progress-pct.over { color:#f56c6c; }
+  .ytd-amounts { font-size:11.5px;color:#303133;margin-top:3px; }
+  .ytd-amounts .ytd-now   { font-weight:600; }
+  .ytd-amounts .ytd-total { color:#909399; }
+  .ytd-def-box { background:#f0f7ff;border:1px solid #bae0ff;border-radius:4px;padding:12px 16px;margin-top:14px; }
+  .ytd-def-box .def-title { font-size:12px;font-weight:700;color:#0958d9;margin-bottom:8px; }
+  .ytd-def-box .def-row { display:flex;gap:8px;margin-bottom:5px;align-items:flex-start; }
+  .ytd-def-box .def-row:last-child { margin-bottom:0; }
+  .ytd-def-box .def-label { font-size:11.5px;font-weight:600;color:#0958d9;white-space:nowrap;min-width:110px; }
+  .ytd-def-box .def-desc  { font-size:11.5px;color:#1677ff;line-height:1.55; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top-nav">
+    <span class="nav-hamburger">☰</span>
+    <div class="nav-logo"><span class="nav-logo-text">Geek</span><span class="nav-logo-plus">+</span></div>
+    <div class="nav-tabs">
+      <span class="nav-tab">GOP</span><span class="nav-tab">GPM</span><span class="nav-tab">SS</span>
+      <span class="nav-tab">CPQ</span><span class="nav-tab outline-green">GPP</span><span class="nav-tab">GTS</span>
+      <span class="nav-tab">IS</span><span class="nav-tab">ACCOUNT</span><span class="nav-tab">OMS</span>
+      <span class="nav-tab">FTS</span><span class="nav-tab">GRP</span><span class="nav-tab active">GCF</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-icon">⊞</span><span class="nav-icon">⚙</span>
+      <span class="nav-todo">ToDo<span class="nav-badge">24</span></span>
+      <span class="nav-arrow">∨</span>
+      <div class="nav-avatar">U</div>
+      <button class="nav-admin-btn">进入管理后台</button>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-header"><span class="sidebar-logo-txt">GCF</span><span class="sidebar-hamburger-btn">☰</span></div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">现金流管理</div>
+      <a class="sidebar-nav-item" href="../../index.html"><span class="sni-icon">📊</span>全局总览</a>
+      <a class="sidebar-nav-item" href="../项目列表/项目列表.html"><span class="sni-icon">📁</span>项目列表</a>
+      <a class="sidebar-nav-item" href="../收支明细/收支明细.html"><span class="sni-icon">📋</span>收支明细</a>
+      <a class="sidebar-nav-item active" href="#"><span class="sni-icon">📅</span>月度预测</a>
+      <a class="sidebar-nav-item" href="../应收账款/应收账款.html"><span class="sni-icon">💵</span>应收账款</a>
+      <a class="sidebar-nav-item" href="../应付账款/应付账款.html"><span class="sni-icon">💳</span>应付账款</a>
+    </div>
+  </div>
+
+  <div class="main-wrapper">
+    <div class="breadcrumb-bar" style="display:flex;justify-content:space-between;align-items:center;">
+      <div><a href="../../index.html">现金流管理</a><span class="sep">/</span><span class="current">月度预测</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;color:#606880;">PM 视图</span>
+        <el-select v-model="selectedPm" size="small" style="width:110px;" clearable placeholder="全部 PM">
+          <el-option v-for="pm in pmList" :key="pm" :label="pm" :value="pm" />
+        </el-select>
+        <el-tag v-if="selectedPm" size="small" type="warning" effect="light">{{ selectedPm }}</el-tag>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- KPI Strip -->
+      <div class="kpi-strip">
+        <div class="kpi-card c1">
+          <div class="kpi-label">T+3月预期收入</div>
+          <div class="kpi-value">{{ fmtWan(futureInflow3) }}</div>
+        </div>
+        <div class="kpi-card c2">
+          <div class="kpi-label">T+3月预期支出</div>
+          <div class="kpi-value">{{ fmtWan(futureOutflow3) }}</div>
+        </div>
+        <div class="kpi-card c3">
+          <div class="kpi-label">T+3月净现金（预测）</div>
+          <div class="kpi-value" :class="futureNet3>=0?'positive':'negative'">{{ fmtWanSigned(futureNet3) }}</div>
+        </div>
+        <div class="kpi-card c4">
+          <div class="kpi-label">本月已确认净现金</div>
+          <div class="kpi-value positive">{{ fmtWanSigned(currentMonthNet) }}</div>
+        </div>
+      </div>
+
+      <!-- Legend + toggle -->
+      <div class="card" style="padding:12px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;gap:16px;align-items:center;font-size:12px;color:#606266;flex-wrap:wrap;">
+            <span><span style="color:#1677ff;font-weight:600;">▲ 蓝色</span>　已确认收款</span>
+            <span><span style="color:#91caff;font-weight:600;">▲ 浅蓝</span>　预测收款（待确认）</span>
+            <span><span style="color:#ff7a00;font-weight:600;">▼ 橙色</span>　已确认支出</span>
+            <span><span style="color:#ffc069;font-weight:600;">▼ 浅橙</span>　预测支出（待确认）</span>
+            <span style="background:#f0fff4;border:1px solid #b7eb8f;padding:2px 8px;border-radius:3px;color:#13c2c2;font-size:11px;">青色行 = 滚动余额</span>
+          </div>
+          <el-radio-group v-model="viewMode" size="small" @change="onModeChange">
+            <el-radio-button value="all">全部</el-radio-button>
+            <el-radio-button value="confirmed">已确认</el-radio-button>
+            <el-radio-button value="pending">待确认</el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
+
+      <!-- Portfolio Monthly Chart -->
+      <div class="card">
+        <div class="card-title">
+          <span>组合月度收支趋势（滚动12个月）</span>
+          <span style="font-size:12px;color:#909399;">柱形=收入/支出，紫线=净现金流</span>
+        </div>
+        <div id="forecast-chart"></div>
+      </div>
+
+      <!-- Forecast Matrix -->
+      <div class="card" style="padding:16px 20px;">
+        <div class="card-title">
+          <span>月度收支预测矩阵（滚动12个月）</span>
+          <span style="font-size:12px;color:#909399;">单位：万元人民币 · 点击单元格查看明细</span>
+        </div>
+        <div class="forecast-scroll">
+          <table class="forecast-table">
+            <thead>
+              <tr>
+                <th class="proj-col">项目</th>
+                <th v-for="m in MONTHS" :key="m.key" class="month-col" :class="m.isCurrent?'current-month':''">
+                  <div class="month-label">{{ m.label }}</div>
+                  <div class="month-sub" :class="m.isCurrent?'now':''">{{ m.sub }}</div>
+                </th>
+                <th style="min-width:100px;text-align:center;background:#f5f7fa;">合计</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="proj in scopeProjects" :key="proj.id">
+                <!-- Project name cell -->
+                <td>
+                  <div class="proj-cell">
+                    <div class="proj-name">{{ proj.name }}</div>
+                    <div class="proj-sub">
+                      {{ proj.pm }} &nbsp;|&nbsp;
+                      <span :class="stClass(proj.status)">{{ stLabel(proj.status) }}</span>
+                    </div>
+                  </div>
+                </td>
+                <!-- Monthly data cells -->
+                <td v-for="m in MONTHS" :key="m.key" class="clickable-cell" @click="drillDown(proj.id, m.key)">
+                  <div class="data-cell"
+                    :class="[m.isCurrent?'current-col':(m.isFuture?'future-col':''),
+                             cellData(proj.id,m.key).hasAny?'has-activity':'']">
+                    <template v-if="cellData(proj.id,m.key).hasAny">
+                      <div class="cell-inflow" v-if="cellData(proj.id,m.key).inflow">
+                        ▲ {{ fmtCell(cellData(proj.id,m.key).inflow) }}
+                      </div>
+                      <div class="cell-inflow-forecast" v-if="cellData(proj.id,m.key).inflowForecast">
+                        ▲ {{ fmtCell(cellData(proj.id,m.key).inflowForecast) }} <span style="font-size:9px;background:#e6f4ff;color:#1677ff;padding:0 3px;border-radius:2px;">预</span>
+                      </div>
+                      <div class="cell-outflow" v-if="cellData(proj.id,m.key).outflow">
+                        ▼ {{ fmtCell(cellData(proj.id,m.key).outflow) }}
+                      </div>
+                      <div class="cell-outflow-forecast" v-if="cellData(proj.id,m.key).outflowForecast">
+                        ▼ {{ fmtCell(cellData(proj.id,m.key).outflowForecast) }} <span style="font-size:9px;background:#fff7e6;color:#d48806;padding:0 3px;border-radius:2px;">预</span>
+                      </div>
+                      <div class="cell-net"
+                        :class="cellData(proj.id,m.key).net>0?'positive':cellData(proj.id,m.key).net<0?'negative':'zero'">
+                        {{ fmtCellSigned(cellData(proj.id,m.key).net) }}
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="cell-empty">—</div>
+                    </template>
+                  </div>
+                </td>
+                <!-- Row total -->
+                <td>
+                  <div class="data-cell total-row">
+                    <div class="cell-inflow" v-if="rowTotal(proj.id).inflow">▲ {{ fmtCell(rowTotal(proj.id).inflow) }}</div>
+                    <div class="cell-outflow" v-if="rowTotal(proj.id).outflow">▼ {{ fmtCell(rowTotal(proj.id).outflow) }}</div>
+                    <div class="cell-net"
+                      :class="rowTotal(proj.id).net>0?'positive':rowTotal(proj.id).net<0?'negative':'zero'">
+                      {{ fmtCellSigned(rowTotal(proj.id).net) }}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <!-- Total row -->
+              <tr style="background:#f5f7fa;">
+                <td><div class="proj-cell total-row"><div class="proj-name" style="color:#303133;">合　计</div></div></td>
+                <td v-for="m in MONTHS" :key="m.key">
+                  <div class="data-cell total-row">
+                    <div class="cell-inflow" v-if="colTotal(m.key).inflow">▲ {{ fmtCell(colTotal(m.key).inflow) }}</div>
+                    <div class="cell-inflow-forecast" v-if="colTotal(m.key).inflowForecast">▲ {{ fmtCell(colTotal(m.key).inflowForecast) }} <span style="font-size:9px;background:#e6f4ff;color:#1677ff;padding:0 3px;border-radius:2px;">预</span></div>
+                    <div class="cell-outflow" v-if="colTotal(m.key).outflow">▼ {{ fmtCell(colTotal(m.key).outflow) }}</div>
+                    <div class="cell-outflow-forecast" v-if="colTotal(m.key).outflowForecast">▼ {{ fmtCell(colTotal(m.key).outflowForecast) }} <span style="font-size:9px;background:#fff7e6;color:#d48806;padding:0 3px;border-radius:2px;">预</span></div>
+                    <div class="cell-net"
+                      :class="colTotal(m.key).net>0?'positive':colTotal(m.key).net<0?'negative':'zero'">
+                      {{ fmtCellSigned(colTotal(m.key).net) }}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="data-cell total-row">
+                    <div class="cell-inflow">▲ {{ fmtCell(grandTotal.inflow + grandTotal.inflowForecast) }}</div>
+                    <div class="cell-outflow">▼ {{ fmtCell(grandTotal.outflow + grandTotal.outflowForecast) }}</div>
+                    <div class="cell-net" :class="grandTotal.net>0?'positive':grandTotal.net<0?'negative':'zero'">
+                      {{ fmtCellSigned(grandTotal.net) }}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- YTD Revenue & Cost Progress -->
+      <div class="card" style="padding:16px 20px;">
+        <div class="card-title">
+          <span>年初至今（YTD）收入与成本进度</span>
+          <span style="font-size:12px;color:#909399;">{{ _ytdStart }} 至今 · 仅已确认数据</span>
+        </div>
+        <table class="ytd-table">
+          <thead>
+            <tr>
+              <th style="min-width:190px;">项目</th>
+              <th style="min-width:70px;">状态</th>
+              <th style="min-width:220px;">收入进度（实际 YTD / 合同总额）</th>
+              <th style="min-width:220px;">成本进度（实际 YTD / 预算总额）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in ytdData" :key="row.id">
+              <td>
+                <div class="ytd-proj-name">{{ row.name }}</div>
+                <div class="ytd-proj-sub">{{ row.pm }}</div>
+              </td>
+              <td><span :class="stClass(row.status)">{{ stLabel(row.status) }}</span></td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill rev" :style="{width:Math.min(row.revPct,100)+'%'}"></div>
+                  </div>
+                  <span class="progress-pct" :class="row.revPct>=100?'over':row.revPct>=70?'high':row.revPct>=40?'mid':'low'">{{ row.revPct }}%</span>
+                </div>
+                <div class="ytd-amounts">
+                  <span class="ytd-now">{{ fmtWan(row.revenueYtd) }}</span>
+                  <span class="ytd-total"> / {{ fmtWan(row.revenueTotal) }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" :class="row.costPct>=100?'over':'cost'" :style="{width:Math.min(row.costPct,100)+'%'}"></div>
+                  </div>
+                  <span class="progress-pct" :class="row.costPct>=100?'over':row.costPct>=80?'high':row.costPct>=50?'mid':'low'">{{ row.costPct }}%</span>
+                </div>
+                <div class="ytd-amounts">
+                  <span class="ytd-now">{{ fmtWan(row.costYtd) }}</span>
+                  <span class="ytd-total"> / {{ fmtWan(row.costTotal) }}</span>
+                </div>
+              </td>
+            </tr>
+            <tr class="total-row">
+              <td><div class="ytd-proj-name">合　计</div></td>
+              <td>—</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar-bg"><div class="progress-bar-fill rev" :style="{width:Math.min(ytdPortfolio.revPct,100)+'%'}"></div></div>
+                  <span class="progress-pct mid">{{ ytdPortfolio.revPct }}%</span>
+                </div>
+                <div class="ytd-amounts">
+                  <span class="ytd-now">{{ fmtWan(ytdPortfolio.revenueYtd) }}</span>
+                  <span class="ytd-total"> / {{ fmtWan(ytdPortfolio.revenueTotal) }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar-bg"><div class="progress-bar-fill cost" :style="{width:Math.min(ytdPortfolio.costPct,100)+'%'}"></div></div>
+                  <span class="progress-pct mid">{{ ytdPortfolio.costPct }}%</span>
+                </div>
+                <div class="ytd-amounts">
+                  <span class="ytd-now">{{ fmtWan(ytdPortfolio.costYtd) }}</span>
+                  <span class="ytd-total"> / {{ fmtWan(ytdPortfolio.costTotal) }}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="ytd-def-box">
+          <div class="def-title">📖 字段说明</div>
+          <div class="def-row">
+            <span class="def-label">YTD（年初至今）</span>
+            <span class="def-desc">从今年1月1日至今日，已发生的实际收付记录（仅统计状态为"已确认"的条目，预测和待确认数据不计入）。</span>
+          </div>
+          <div class="def-row">
+            <span class="def-label">收入进度</span>
+            <span class="def-desc">YTD 实际已收款金额 ÷ 项目合同总金额。反映该项目当年的回款完成度，数值越高说明收款进度越快。</span>
+          </div>
+          <div class="def-row">
+            <span class="def-label">成本进度</span>
+            <span class="def-desc">YTD 实际已发生成本 ÷ 项目预算总成本。反映成本消耗速度。</span>
+          </div>
+          <div class="def-row">
+            <span class="def-label">⚠️ 风险信号</span>
+            <span class="def-desc">若某项目"成本进度 % 明显高于收入进度 %"，说明成本消耗速度快于回款速度，存在资金垫付压力，需重点关注。</span>
+          </div>
+          <div class="def-row">
+            <span class="def-label">* 预算总成本</span>
+            <span class="def-desc">当前为原型演示用示例数据，正式版本需对接公司实际预算系统后替换。</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/echarts/dist/echarts.min.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+<script>
+const PROJECTS = [
+  { id:'PROJ-001', name:'P-希音-CN-肇庆-电商-Ⅳ期',        pm:'张三', status:'active',    contractValue:12500000 },
+  { id:'PROJ-002', name:'P-UNILEVER-AR-仓库-Ⅰ期',          pm:'李四', status:'at-risk',   contractValue:8200000  },
+  { id:'PROJ-003', name:'P-US ELOGISTICS-CA-仓库',          pm:'王五', status:'active',    contractValue:15800000 },
+  { id:'PROJ-004', name:'P-CEVA-DE-物流中心-Ⅱ期',          pm:'赵六', status:'on-hold',   contractValue:18500000 },
+  { id:'PROJ-005', name:'P-LAZADA-TH-曼谷-仓库-Ⅲ期',      pm:'陈七', status:'completed', contractValue:7300000  },
+  { id:'PROJ-006', name:'P-京东-CN-上海-仓储-Ⅰ期',         pm:'张三', status:'active',    contractValue:9500000  },
+  { id:'PROJ-007', name:'P-DHL-BR-圣保罗-物流中心',         pm:'李四', status:'active',    contractValue:13200000 },
+  { id:'PROJ-008', name:'P-AMAZON-US-西雅图-自动化仓储',    pm:'王五', status:'at-risk',   contractValue:6800000  },
+  { id:'PROJ-009', name:'P-MAERSK-NL-鹿特丹-港口物流',     pm:'赵六', status:'active',    contractValue:11400000 },
+  { id:'PROJ-010', name:'P-GRAB-SG-新加坡-仓库-Ⅰ期',      pm:'陈七', status:'active',    contractValue:16900000 },
+];
+const COST_BUDGET = {
+  'PROJ-001': 8125000,
+  'PROJ-002': 5330000,
+  'PROJ-003': 10270000,
+  'PROJ-004': 11100000,
+  'PROJ-005': 4745000,
+  'PROJ-006': 6175000,
+  'PROJ-007': 8580000,
+  'PROJ-008': 4420000,
+  'PROJ-009': 7410000,
+  'PROJ-010': 10985000,
+};
+const ALL_ENTRIES = [
+  { id:'CE-001', projectId:'PROJ-001', date:'2026-03-10', type:'invoice', direction:'in',  amountCny:3600000, status:'confirmed' },
+  { id:'CE-002', projectId:'PROJ-001', date:'2026-03-22', type:'receipt', direction:'in',  amountCny:3600000, status:'confirmed' },
+  { id:'CE-003', projectId:'PROJ-001', date:'2026-06-01', type:'invoice', direction:'in',  amountCny:2400000, status:'confirmed' },
+  { id:'CE-004', projectId:'PROJ-001', date:'2026-06-28', type:'receipt', direction:'in',  amountCny:2400000, status:'confirmed' },
+  { id:'CE-005', projectId:'PROJ-001', date:'2026-09-01', type:'invoice', direction:'in',  amountCny:4800000, status:'pending'   },
+  { id:'CE-006', projectId:'PROJ-001', date:'2026-03-28', type:'expense', direction:'out', amountCny:1800000, status:'confirmed' },
+  { id:'CE-007', projectId:'PROJ-001', date:'2026-05-20', type:'expense', direction:'out', amountCny:480000,  status:'confirmed' },
+  { id:'CE-008', projectId:'PROJ-001', date:'2026-06-24', type:'expense', direction:'out', amountCny:1800000, status:'confirmed' },
+  { id:'CE-009', projectId:'PROJ-001', date:'2026-07-03', type:'invoice', direction:'in',  amountCny:1200000, status:'pending'   },
+  { id:'CE-010', projectId:'PROJ-002', date:'2026-02-01', type:'invoice', direction:'in',  amountCny:2550000, status:'confirmed' },
+  { id:'CE-011', projectId:'PROJ-002', date:'2026-02-22', type:'receipt', direction:'in',  amountCny:2550000, status:'confirmed' },
+  { id:'CE-012', projectId:'PROJ-002', date:'2026-04-15', type:'invoice', direction:'in',  amountCny:2125000, status:'overdue'   },
+  { id:'CE-013', projectId:'PROJ-002', date:'2026-03-10', type:'expense', direction:'out', amountCny:3400000, status:'confirmed' },
+  { id:'CE-014', projectId:'PROJ-002', date:'2026-04-20', type:'expense', direction:'out', amountCny:680000,  status:'confirmed' },
+  { id:'CE-015', projectId:'PROJ-002', date:'2026-05-05', type:'expense', direction:'out', amountCny:340000,  status:'confirmed' },
+  { id:'CE-016', projectId:'PROJ-002', date:'2026-07-05', type:'expense', direction:'out', amountCny:850000,  status:'pending'   },
+  { id:'CE-017', projectId:'PROJ-003', date:'2025-12-18', type:'receipt', direction:'in',  amountCny:1680000, status:'confirmed' },
+  { id:'CE-018', projectId:'PROJ-003', date:'2026-03-22', type:'receipt', direction:'in',  amountCny:1120000, status:'confirmed' },
+  { id:'CE-019', projectId:'PROJ-003', date:'2026-06-26', type:'receipt', direction:'in',  amountCny:1800000, status:'confirmed' },
+  { id:'CE-020', projectId:'PROJ-003', date:'2026-01-15', type:'expense', direction:'out', amountCny:1120000, status:'confirmed' },
+  { id:'CE-021', projectId:'PROJ-003', date:'2026-04-10', type:'expense', direction:'out', amountCny:185000,  status:'confirmed' },
+  { id:'CE-022', projectId:'PROJ-003', date:'2026-05-20', type:'expense', direction:'out', amountCny:280000,  status:'confirmed' },
+  { id:'CE-023', projectId:'PROJ-003', date:'2026-08-01', type:'invoice', direction:'in',  amountCny:1680000, status:'pending'   },
+  { id:'CE-024', projectId:'PROJ-004', date:'2026-03-05', type:'receipt', direction:'in',  amountCny:2760000, status:'confirmed' },
+  { id:'CE-025', projectId:'PROJ-004', date:'2026-06-22', type:'receipt', direction:'in',  amountCny:2800000, status:'confirmed' },
+  { id:'CE-026', projectId:'PROJ-004', date:'2026-03-20', type:'expense', direction:'out', amountCny:1840000, status:'confirmed' },
+  { id:'CE-027', projectId:'PROJ-004', date:'2026-04-15', type:'expense', direction:'out', amountCny:456000,  status:'confirmed' },
+  { id:'CE-028', projectId:'PROJ-004', date:'2026-07-05', type:'expense', direction:'out', amountCny:920000,  status:'pending'   },
+  { id:'CE-029', projectId:'PROJ-005', date:'2025-07-22', type:'receipt', direction:'in',  amountCny:1020000, status:'confirmed' },
+  { id:'CE-030', projectId:'PROJ-005', date:'2025-11-03', type:'receipt', direction:'in',  amountCny:2040000, status:'confirmed' },
+  { id:'CE-031', projectId:'PROJ-005', date:'2026-06-23', type:'receipt', direction:'in',  amountCny:2720000, status:'confirmed' },
+  { id:'CE-032', projectId:'PROJ-005', date:'2025-08-20', type:'expense', direction:'out', amountCny:1400000, status:'confirmed' },
+  { id:'CE-033', projectId:'PROJ-005', date:'2025-12-10', type:'expense', direction:'out', amountCny:680000,  status:'confirmed' },
+  { id:'CE-034', projectId:'PROJ-005', date:'2026-05-15', type:'expense', direction:'out', amountCny:1360000, status:'confirmed' },
+  { id:'CE-035', projectId:'PROJ-005', date:'2026-06-10', type:'expense', direction:'out', amountCny:170000,  status:'confirmed' },
+  // ── PROJ-006 ─ 张三 / 京东物流 ──
+  { id:'CE-036', projectId:'PROJ-006', date:'2026-04-10', type:'invoice', direction:'in',  amountCny:2850000, status:'confirmed' },
+  { id:'CE-037', projectId:'PROJ-006', date:'2026-04-25', type:'receipt', direction:'in',  amountCny:2850000, status:'confirmed' },
+  { id:'CE-038', projectId:'PROJ-006', date:'2026-07-01', type:'invoice', direction:'in',  amountCny:1900000, status:'pending'   },
+  { id:'CE-039', projectId:'PROJ-006', date:'2026-04-20', type:'expense', direction:'out', amountCny:1500000, status:'confirmed' },
+  { id:'CE-040', projectId:'PROJ-006', date:'2026-05-15', type:'expense', direction:'out', amountCny:380000,  status:'confirmed' },
+  // ── PROJ-007 ─ 李四 / DHL Brazil ──
+  { id:'CE-041', projectId:'PROJ-007', date:'2026-03-18', type:'receipt', direction:'in',  amountCny:2160000, status:'confirmed' },
+  { id:'CE-042', projectId:'PROJ-007', date:'2026-05-20', type:'invoice', direction:'in',  amountCny:1800000, status:'overdue'   },
+  { id:'CE-043', projectId:'PROJ-007', date:'2026-03-25', type:'expense', direction:'out', amountCny:2800000, status:'confirmed' },
+  { id:'CE-044', projectId:'PROJ-007', date:'2026-05-08', type:'expense', direction:'out', amountCny:320000,  status:'confirmed' },
+  { id:'CE-045', projectId:'PROJ-007', date:'2026-06-15', type:'expense', direction:'out', amountCny:480000,  status:'pending'   },
+  // ── PROJ-008 ─ 王五 / Amazon US ──
+  { id:'CE-046', projectId:'PROJ-008', date:'2026-03-10', type:'receipt', direction:'in',  amountCny:3300000, status:'confirmed' },
+  { id:'CE-047', projectId:'PROJ-008', date:'2026-05-15', type:'invoice', direction:'in',  amountCny:2750000, status:'overdue'   },
+  { id:'CE-048', projectId:'PROJ-008', date:'2026-03-20', type:'expense', direction:'out', amountCny:2100000, status:'confirmed' },
+  { id:'CE-049', projectId:'PROJ-008', date:'2026-04-28', type:'expense', direction:'out', amountCny:650000,  status:'confirmed' },
+  { id:'CE-050', projectId:'PROJ-008', date:'2026-06-01', type:'expense', direction:'out', amountCny:420000,  status:'confirmed' },
+  // ── PROJ-009 ─ 赵六 / Maersk ──
+  { id:'CE-051', projectId:'PROJ-009', date:'2026-05-20', type:'receipt', direction:'in',  amountCny:2640000, status:'confirmed' },
+  { id:'CE-052', projectId:'PROJ-009', date:'2026-08-01', type:'invoice', direction:'in',  amountCny:2200000, status:'pending'   },
+  { id:'CE-053', projectId:'PROJ-009', date:'2026-05-28', type:'expense', direction:'out', amountCny:1760000, status:'confirmed' },
+  { id:'CE-054', projectId:'PROJ-009', date:'2026-06-20', type:'expense', direction:'out', amountCny:520000,  status:'confirmed' },
+  // ── PROJ-010 ─ 陈七 / Grab Singapore ──
+  { id:'CE-055', projectId:'PROJ-010', date:'2026-05-05', type:'receipt', direction:'in',  amountCny:1620000, status:'confirmed' },
+  { id:'CE-056', projectId:'PROJ-010', date:'2026-07-15', type:'invoice', direction:'in',  amountCny:1350000, status:'pending'   },
+  { id:'CE-057', projectId:'PROJ-010', date:'2026-05-12', type:'expense', direction:'out', amountCny:980000,  status:'confirmed' },
+  { id:'CE-058', projectId:'PROJ-010', date:'2026-06-08', type:'expense', direction:'out', amountCny:310000,  status:'confirmed' },
+  { id:'CE-059', projectId:'PROJ-010', date:'2026-07-05', type:'expense', direction:'out', amountCny:125000,  status:'pending'   },
+];
+
+let _forecastChart = null;
+
+const STARTING_CASH = 30_000_000;
+
+const _now = new Date();
+const _ytdStart = _now.getFullYear() + '-01-01';
+const _ytdEnd = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0');
+const MONTHS = Array.from({length:12}, (_,i) => {
+  const d = new Date(_now.getFullYear(), _now.getMonth() + i, 1);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const key = `${y}-${String(m).padStart(2,'0')}`;
+  const isCurrent = i === 0;
+  return {
+    key,
+    label: `${m}月`,
+    sub: isCurrent ? '当前月' : `T+${i}`,
+    isCurrent,
+    isFuture: i > 0,
+  };
+});
+
+function fmtWan(n) { const w=Math.abs(n)/10000; return (n<0?'-':'')+'¥'+(w>=100?Math.round(w).toLocaleString():w.toFixed(1))+'万'; }
+function fmtWanSigned(n) { const w=Math.abs(n)/10000; return (n<0?'-¥':'+¥')+(w>=100?Math.round(w).toLocaleString():w.toFixed(1))+'万'; }
+function fmtCell(n) { const w=Math.abs(n)/10000; return (w>=100?Math.round(w).toLocaleString():w.toFixed(1))+'万'; }
+function fmtCellSigned(n) { const w=Math.abs(n)/10000; return (n<0?'-':'+')+(w>=100?Math.round(w).toLocaleString():w.toFixed(1))+'万'; }
+
+const { createApp } = Vue;
+createApp({
+  data() {
+    return { PROJECTS, MONTHS, STARTING_CASH, viewMode: 'all', selectedPm: '' };
+  },
+  computed: {
+    pmList() { return [...new Set(PROJECTS.map(p => p.pm))]; },
+    scopeProjects() {
+      return this.selectedPm ? PROJECTS.filter(p => p.pm === this.selectedPm) : PROJECTS;
+    },
+    scopeIds() { return new Set(this.scopeProjects.map(p => p.id)); },
+    scopeEntries() {
+      return this.selectedPm
+        ? ALL_ENTRIES.filter(e => this.scopeIds.has(e.projectId))
+        : ALL_ENTRIES;
+    },
+    entries() {
+      if (this.viewMode === 'all')       return this.scopeEntries;
+      if (this.viewMode === 'confirmed') return this.scopeEntries.filter(e => e.status === 'confirmed');
+      return this.scopeEntries.filter(e => e.status === 'pending' || e.status === 'overdue');
+    },
+    futureInflow3() {
+      const next3 = MONTHS.slice(1,4).map(m=>m.key);
+      return this.scopeEntries.filter(e=>next3.includes(e.date.slice(0,7))&&e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+    },
+    futureOutflow3() {
+      const next3 = MONTHS.slice(1,4).map(m=>m.key);
+      return this.scopeEntries.filter(e=>next3.includes(e.date.slice(0,7))&&e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+    },
+    futureNet3() { return this.futureInflow3 - this.futureOutflow3; },
+    currentMonthNet() {
+      const cm = MONTHS[0].key;
+      const me = this.scopeEntries.filter(e=>e.date.slice(0,7)===cm&&e.status==='confirmed');
+      return me.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0)
+           - me.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+    },
+    grandTotal() {
+      const ents = this.scopeEntries.filter(e=>MONTHS.some(m=>m.key===e.date.slice(0,7)));
+      const confirmed = ents.filter(e=>e.status==='confirmed');
+      const forecast  = ents.filter(e=>e.status==='pending'||e.status==='overdue');
+      return {
+        inflow:          confirmed.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0),
+        inflowForecast:  forecast.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0),
+        outflow:         confirmed.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0),
+        outflowForecast: forecast.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0),
+        net: ents.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0)
+           - ents.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0),
+      };
+    },
+    runningBalance() {
+      let bal = STARTING_CASH / 10000;
+      return MONTHS.map(m => {
+        const t = this.colTotal(m.key);
+        bal += t.inflow + t.inflowForecast - t.outflow - t.outflowForecast;
+        return +bal.toFixed(1);
+      });
+    },
+    ytdData() {
+      return this.scopeProjects.map(proj => {
+        const entries = ALL_ENTRIES.filter(e =>
+          e.projectId === proj.id &&
+          e.date >= _ytdStart &&
+          e.date <= _ytdEnd &&
+          e.status === 'confirmed'
+        );
+        const revenueYtd   = entries.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+        const costYtd      = entries.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+        const revenueTotal = proj.contractValue || 0;
+        const costTotal    = COST_BUDGET[proj.id] || 0;
+        const revPct  = revenueTotal ? Math.min(Math.round(revenueYtd/revenueTotal*100),999) : 0;
+        const costPct = costTotal    ? Math.min(Math.round(costYtd/costTotal*100),999)    : 0;
+        return { ...proj, revenueYtd, revenueTotal, revPct, costYtd, costTotal, costPct };
+      });
+    },
+    ytdPortfolio() {
+      const rows = this.ytdData;
+      const rYtd = rows.reduce((s,r)=>s+r.revenueYtd,0);
+      const rTot = rows.reduce((s,r)=>s+r.revenueTotal,0);
+      const cYtd = rows.reduce((s,r)=>s+r.costYtd,0);
+      const cTot = rows.reduce((s,r)=>s+r.costTotal,0);
+      return {
+        revenueYtd:rYtd, revenueTotal:rTot, revPct:rTot?Math.round(rYtd/rTot*100):0,
+        costYtd:cYtd,    costTotal:cTot,    costPct:cTot?Math.round(cYtd/cTot*100):0,
+      };
+    },
+  },
+  mounted() { this.$nextTick(() => this.renderForecastChart()); },
+  watch: {
+    viewMode()   { this.renderForecastChart(); },
+    selectedPm() { if (_forecastChart) { _forecastChart.dispose(); _forecastChart = null; } this.$nextTick(() => this.renderForecastChart()); },
+  },
+  methods: {
+    fmtWan, fmtWanSigned, fmtCell, fmtCellSigned,
+    stLabel(s) { return {active:'进行中','at-risk':'风险','on-hold':'暂停',completed:'已完成'}[s]??s; },
+    stClass(s) { return {'active':'st-active','at-risk':'st-at-risk','on-hold':'st-on-hold','completed':'st-completed'}[s]??''; },
+    onModeChange() {},
+    cellData(projectId, monthKey) {
+      const me = this.scopeEntries.filter(e => e.projectId === projectId && e.date.slice(0,7) === monthKey);
+      const show = this.viewMode === 'all' ? me
+        : this.viewMode === 'confirmed' ? me.filter(e=>e.status==='confirmed')
+        : me.filter(e=>e.status==='pending'||e.status==='overdue');
+      const confirmed = show.filter(e=>e.status==='confirmed');
+      const forecast  = show.filter(e=>e.status==='pending'||e.status==='overdue');
+      const inflow          = confirmed.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+      const inflowForecast  = forecast.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+      const outflow         = confirmed.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+      const outflowForecast = forecast.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+      return { inflow, inflowForecast, outflow, outflowForecast,
+               net: inflow+inflowForecast-outflow-outflowForecast,
+               hasAny: !!(inflow||inflowForecast||outflow||outflowForecast) };
+    },
+    rowTotal(projectId) {
+      const me = this.scopeEntries.filter(e => e.projectId===projectId && MONTHS.some(m=>m.key===e.date.slice(0,7)));
+      const show = this.viewMode === 'all' ? me
+        : this.viewMode === 'confirmed' ? me.filter(e=>e.status==='confirmed')
+        : me.filter(e=>e.status==='pending'||e.status==='overdue');
+      const inflow  = show.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+      const outflow = show.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+      return { inflow, outflow, net: inflow-outflow };
+    },
+    colTotal(monthKey) {
+      const me = this.scopeEntries.filter(e=>e.date.slice(0,7)===monthKey);
+      const confirmed = me.filter(e=>e.status==='confirmed');
+      const forecast  = me.filter(e=>e.status==='pending'||e.status==='overdue');
+      const inflow          = confirmed.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+      const inflowForecast  = forecast.filter(e=>e.direction==='in').reduce((s,e)=>s+e.amountCny,0);
+      const outflow         = confirmed.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+      const outflowForecast = forecast.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
+      return { inflow, inflowForecast, outflow, outflowForecast,
+               net: inflow+inflowForecast-outflow-outflowForecast };
+    },
+    drillDown(projId, monthKey) {
+      window.location.href = '../收支明细/收支明细.html?project='+projId+'&month='+monthKey;
+    },
+    renderForecastChart() {
+      const el = document.getElementById('forecast-chart');
+      if (!el) return;
+      if (!_forecastChart) _forecastChart = echarts.init(el);
+      const labels     = MONTHS.map(m => m.label);
+      const inflow     = MONTHS.map(m => this.colTotal(m.key).inflow / 10000);
+      const inflowF    = MONTHS.map(m => this.colTotal(m.key).inflowForecast / 10000);
+      const outflowN   = MONTHS.map(m => -this.colTotal(m.key).outflow / 10000);
+      const outflowFN  = MONTHS.map(m => -this.colTotal(m.key).outflowForecast / 10000);
+      const net        = MONTHS.map(m => +(this.colTotal(m.key).net / 10000).toFixed(1));
+
+      _forecastChart.off('click');
+      _forecastChart.on('click', params => {
+        if (params.componentType === 'series' && params.dataIndex !== undefined) {
+          window.location.href = '../收支明细/收支明细.html?month=' + MONTHS[params.dataIndex].key;
+        }
+      });
+
+      _forecastChart.setOption({
+        tooltip: { trigger:'axis', formatter: params => {
+          let h = `<b>${params[0].axisValue}</b><br/>`;
+          params.forEach(p => {
+            if (p.value === 0 || p.value === null) return;
+            const v = ['支出(确认)','预测支出'].includes(p.seriesName) ? Math.abs(p.value) : p.value;
+            h += `${p.marker}${p.seriesName}：¥${v}万<br/>`;
+          });
+          return h;
+        }},
+        legend: { data:['收入(确认)','预测收入','支出(确认)','预测支出','净现金流'], top:4, right:0, textStyle:{ fontSize:10 } },
+        grid: { top:36, bottom:28, left:60, right:20 },
+        xAxis: { type:'category', data:labels, axisLabel:{ color:'#909399', fontSize:11 }, axisLine:{ lineStyle:{ color:'#e4e7ed' } } },
+        yAxis: { type:'value', name:'万元', nameTextStyle:{ color:'#909399', fontSize:11 }, axisLabel:{ color:'#909399', fontSize:11, formatter: v => Math.abs(v) }, splitLine:{ lineStyle:{ color:'#f0f2f5' } } },
+        series: [
+          { name:'收入(确认)', type:'bar', stack:'in', data:inflow,   barMaxWidth:22, itemStyle:{ color:'#1677ff', borderRadius:[3,3,0,0] }, cursor:'pointer' },
+          { name:'预测收入',   type:'bar', stack:'in', data:inflowF,  barMaxWidth:22, itemStyle:{ color:'#91caff', borderRadius:[3,3,0,0] }, cursor:'pointer' },
+          { name:'支出(确认)', type:'bar', stack:'out',data:outflowN, barMaxWidth:22, itemStyle:{ color:'#ff7a00', borderRadius:[0,0,3,3] }, cursor:'pointer' },
+          { name:'预测支出',   type:'bar', stack:'out',data:outflowFN,barMaxWidth:22, itemStyle:{ color:'#ffc069', borderRadius:[0,0,3,3] }, cursor:'pointer' },
+          { name:'净现金流', type:'line', data:net, smooth:true, symbol:'circle', symbolSize:5,
+            lineStyle:{ color:'#722ed1', width:2.5 }, itemStyle:{ color:'#722ed1' },
+            label:{ show:true, position:'top', formatter: p=>`¥${p.value}万`, fontSize:10, color:'#722ed1', fontWeight:600 } },
+        ],
+      }, true);
+      window.addEventListener('resize', () => _forecastChart && _forecastChart.resize());
+    },
+  },
+}).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

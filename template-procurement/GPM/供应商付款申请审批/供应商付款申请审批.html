@@ -1,0 +1,375 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>供应商付款申请审批</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+    /* 顶部导航栏 */
+    .top-nav {
+      position: fixed; top: 0; left: 0; right: 0; height: 48px;
+      background: #fff; border-bottom: 1px solid #e4e7ed;
+      display: flex; align-items: center; padding: 0 12px; gap: 10px; z-index: 1000;
+    }
+    .nav-hamburger { font-size: 18px; color: #909399; cursor: pointer; padding: 4px; }
+    .nav-logo { display: flex; align-items: center; gap: 4px; margin-right: 8px; }
+    .nav-logo-text { color: #1677ff; font-weight: bold; font-size: 16px; }
+    .nav-logo-plus {
+      width: 18px; height: 18px; background: #ff7a00; color: #fff;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: bold; line-height: 1;
+    }
+    .nav-tabs { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .nav-tab {
+      font-size: 12px; padding: 3px 10px; border-radius: 12px;
+      cursor: pointer; white-space: nowrap; color: #606266;
+      transition: all 0.2s;
+    }
+    .nav-tab:hover { background: #f5f7fa; }
+    .nav-tab.active { background: #ff7a00; color: #fff; }
+    .nav-tab.green-outline { border: 1px solid #67c23a; color: #67c23a; }
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .nav-icon { font-size: 16px; color: #606266; cursor: pointer; }
+    .nav-divider { width: 1px; height: 16px; background: #e4e7ed; }
+    .nav-todo { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #606266; cursor: pointer; }
+    .nav-support { font-size: 13px; color: #606266; cursor: pointer; }
+    .nav-avatar {
+      width: 28px; height: 28px; background: #c0c4cc; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;
+    }
+    .nav-admin-btn {
+      font-size: 12px; padding: 4px 10px; border: 1px solid #dcdfe6;
+      border-radius: 4px; cursor: pointer; color: #606266; white-space: nowrap;
+      background: #fff;
+    }
+    .nav-admin-btn:hover { border-color: #409eff; color: #409eff; }
+
+    /* 左侧栏 */
+    .sidebar {
+      position: fixed; top: 48px; left: 0; bottom: 0;
+      width: 200px; background: #1a5fa0;
+      display: flex; flex-direction: column;
+      z-index: 900; overflow-y: auto;
+    }
+    .sidebar-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-txt { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 3px; }
+    .sidebar-hamburger-btn { font-size: 18px; color: rgba(255,255,255,0.7); cursor: pointer; }
+    .sidebar-group { margin-top: 4px; }
+    .sidebar-group-title {
+      padding: 10px 16px 4px;
+      font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5);
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .sidebar-nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 16px; font-size: 13px; color: rgba(255,255,255,0.85);
+      cursor: pointer; transition: background 0.15s;
+      border-left: 3px solid transparent; text-decoration: none;
+    }
+    .sidebar-nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .sidebar-nav-item.active {
+      background: rgba(255,255,255,0.18); color: #fff;
+      border-left-color: #fff; font-weight: 600;
+    }
+    .sni-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    /* 主内容区 */
+    .main { margin-left: 200px; margin-top: 48px; }
+
+    /* 面包屑 */
+    .breadcrumb {
+      height: 40px; background: #fff; border-bottom: 1px solid #e4e7ed;
+      display: flex; align-items: center; padding: 0 20px; font-size: 13px; color: #606266;
+    }
+    .breadcrumb span { color: #909399; margin: 0 6px; }
+    .breadcrumb .current { color: #303133; }
+
+    /* 内容区 */
+    .content { padding: 16px 20px; background: #f0f2f5; min-height: calc(100vh - 88px); }
+
+    /* 卡片 */
+    .card {
+      background: #fff; border-radius: 4px; padding: 16px 20px; margin-bottom: 12px;
+    }
+
+    /* 筛选区 */
+    .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .filter-item { display: flex; align-items: center; gap: 8px; }
+    .filter-label { font-size: 13px; color: #606266; white-space: nowrap; }
+
+    /* 分页 */
+    .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+    /* 操作按钮 */
+    .op-link { font-size: 12px; color: #409eff; cursor: pointer; text-decoration: none; }
+    .op-link:hover { color: #66b1ff; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 顶部导航栏 -->
+  <div class="top-nav">
+    <div class="nav-hamburger">☰</div>
+    <div class="nav-logo">
+      <span class="nav-logo-text">Geek</span>
+      <div class="nav-logo-plus">+</div>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab">GOP</div>
+      <div class="nav-tab active">GPM</div>
+      <div class="nav-tab">SS</div>
+      <div class="nav-tab">CPQ</div>
+      <div class="nav-tab green-outline">GPP</div>
+      <div class="nav-tab">GTS</div>
+      <div class="nav-tab">IS</div>
+      <div class="nav-tab">ACCOUNT</div>
+      <div class="nav-tab">OMS</div>
+      <div class="nav-tab">FTS</div>
+      <div class="nav-tab">GRP</div>
+    </div>
+    <div class="nav-right">
+      <span class="nav-icon">⊞</span>
+      <span class="nav-icon">⚙</span>
+      <div class="nav-divider"></div>
+      <div class="nav-todo">
+        ToDo
+        <el-badge :value="1232" type="danger" :max="9999">
+          <span style="display:inline-block;width:4px;"></span>
+        </el-badge>
+      </div>
+      <span class="nav-support">支持 ∨</span>
+      <div class="nav-avatar">U</div>
+      <button class="nav-admin-btn">进入管理后台</button>
+    </div>
+  </div>
+
+  <!-- 左侧栏 -->
+  <!-- 左侧边栏 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo-txt">GPM</span>
+      <span class="sidebar-hamburger-btn">☰</span>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">采购管理</div>
+      <a class="sidebar-nav-item" href="../采购计划单列表/采购计划单列表.html">
+        <span class="sni-icon">📋</span>采购计划单列表
+      </a>
+      <a class="sidebar-nav-item" href="../我的采购任务/我的采购任务.html"><span class="sni-icon">📌</span>我的采购任务</a>
+      <a class="sidebar-nav-item" href="../采购台账/采购台账.html">
+        <span class="sni-icon">📊</span>采购台账
+      </a>
+      <a class="sidebar-nav-item" href="../采购计划审批/采购计划审批.html">
+        <span class="sni-icon">✅</span>采购计划审批
+      </a>
+      <a class="sidebar-nav-item active" href="../供应商付款申请审批/供应商付款申请审批.html">
+        <span class="sni-icon">💰</span>供应商付款申请审批
+      </a>
+      <a class="sidebar-nav-item" href="../PO应付清单/PO应付清单.html">
+        <span class="sni-icon">📄</span>PO 应付清单
+      </a>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main">
+    <!-- 面包屑 -->
+    <div class="breadcrumb">
+      采购管理 <span>/</span> <span class="current">供应商付款申请审批</span>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content">
+
+      <!-- 筛选卡片 -->
+      <div class="card">
+        <div class="filter-row">
+          <div class="filter-item">
+            <span class="filter-label">项目名称</span>
+            <el-input placeholder="请输入项目名称" style="width:160px;" clearable></el-input>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">PO Code</span>
+            <el-input placeholder="请输入PO Code" style="width:160px;" clearable></el-input>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">供应商</span>
+            <el-input placeholder="请输入供应商" style="width:160px;" clearable></el-input>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">审批状态</span>
+            <el-select placeholder="全部" style="width:130px;" clearable>
+              <el-option label="全部" value=""></el-option>
+              <el-option label="待审批" value="pending"></el-option>
+              <el-option label="已通过" value="approved"></el-option>
+              <el-option label="已驳回" value="rejected"></el-option>
+            </el-select>
+          </div>
+          <el-button type="primary">查询</el-button>
+          <el-button>重置</el-button>
+        </div>
+      </div>
+
+      <!-- 表格卡片 -->
+      <div class="card">
+        <el-table :data="tableData" stripe border style="width:100%;">
+          <el-table-column prop="applyNo" label="付款申请单号" min-width="150"></el-table-column>
+          <el-table-column prop="supplier" label="供应商" min-width="120"></el-table-column>
+          <el-table-column prop="poCode" label="PO Code" min-width="110"></el-table-column>
+          <el-table-column prop="payNode" label="付款节点" min-width="90"></el-table-column>
+          <el-table-column prop="amount" label="申请金额" min-width="130"></el-table-column>
+          <el-table-column prop="applyTime" label="申请时间" min-width="150"></el-table-column>
+          <el-table-column prop="status" label="审批状态" min-width="100">
+            <template #default="scope">
+              <el-tag
+                :type="scope.row.statusType"
+                size="small"
+              >{{ scope.row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="260" fixed="right">
+            <template #default="scope">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <a class="op-link" style="cursor:pointer" @click="viewApprovalFlow(scope.row)">查看审批流</a>
+                <template v-if="scope.row.statusCode === 'pending'">
+                  <el-button text type="success" size="small" @click="approve(scope.row)">通过</el-button>
+                  <el-button text type="danger" size="small" @click="reject(scope.row)">驳回</el-button>
+                </template>
+                <template v-if="scope.row.statusCode === 'approved'">
+                  <el-button text type="primary" size="small" @click="goERP(scope.row)">
+                    前往ERP下推付款申请单 →
+                  </el-button>
+                </template>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页 -->
+        <div class="pagination-wrap">
+          <el-pagination
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="15"
+            :page-size="10"
+            :page-sizes="[10, 20, 50]"
+          ></el-pagination>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+<script>
+const { createApp, ref } = Vue;
+
+createApp({
+  setup() {
+    const tableData = ref([
+      {
+        applyNo: 'FKSQ-2026-001',
+        supplier: 'AAA供应链',
+        poCode: 'PO20260001',
+        payNode: '预付款',
+        amount: 'USD 150,000',
+        applyTime: '2026-06-20 10:30',
+        status: '待审批',
+        statusType: 'warning',
+        statusCode: 'pending',
+      },
+      {
+        applyNo: 'FKSQ-2026-002',
+        supplier: 'BBB物流',
+        poCode: 'PO20260002',
+        payNode: '预付款',
+        amount: 'CNY 400,000',
+        applyTime: '2026-06-18 14:00',
+        status: '待审批',
+        statusType: 'warning',
+        statusCode: 'pending',
+      },
+      {
+        applyNo: 'FKSQ-2026-003',
+        supplier: 'AAA供应链',
+        poCode: 'PO20260001',
+        payNode: '发货款',
+        amount: 'USD 200,000',
+        applyTime: '2026-06-01 09:30',
+        status: '已通过',
+        statusType: 'success',
+        statusCode: 'approved',
+      },
+      {
+        applyNo: 'FKSQ-2026-004',
+        supplier: 'CCC技术服务',
+        poCode: 'PO20260003',
+        payNode: '预付款',
+        amount: 'CNY 200,000',
+        applyTime: '2026-05-28 16:00',
+        status: '已驳回',
+        statusType: 'danger',
+        statusCode: 'rejected',
+      },
+    ]);
+
+    function viewApprovalFlow(row) {
+      ElementPlus.ElMessageBox.alert(
+        `<div style="line-height:2">
+          <div>申请人 → 直属上级 → 采购负责人</div>
+          <div style="margin-top:8px;font-size:12px;color:#909399">申请单号：${row.applyNo}</div>
+        </div>`,
+        '审批流程',
+        { dangerouslyUseHTMLString: true }
+      );
+    }
+
+    function approve(row) {
+      ElementPlus.ElMessageBox.confirm(`确认通过【${row.applyNo}】的付款申请？`, '审批确认', {
+        confirmButtonText: '确认通过',
+        cancelButtonText: '取消',
+        type: 'success'
+      }).then(() => {
+        row.statusCode = 'approved';
+        row.status = '已通过';
+        row.statusType = 'success';
+        ElementPlus.ElMessage.success('审批通过');
+      }).catch(() => {});
+    }
+
+    function reject(row) {
+      ElementPlus.ElMessageBox.prompt('请填写驳回原因', '驳回申请', {
+        confirmButtonText: '确认驳回',
+        cancelButtonText: '取消',
+        inputPlaceholder: '请输入驳回原因...',
+        type: 'warning'
+      }).then(({ value }) => {
+        row.statusCode = 'rejected';
+        row.status = '已驳回';
+        row.statusType = 'danger';
+        ElementPlus.ElMessage.warning('已驳回');
+      }).catch(() => {});
+    }
+
+    function goERP(row) {
+      ElementPlus.ElMessage.info('正在跳转至ERP系统...');
+    }
+
+    return { tableData, viewApprovalFlow, approve, reject, goERP };
+  }
+}).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

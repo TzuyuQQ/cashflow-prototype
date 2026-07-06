@@ -1,0 +1,344 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>采购计划单列表</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+    /* 顶部导航栏 */
+    .top-nav {
+      position: fixed; top: 0; left: 0; right: 0; height: 48px;
+      background: #fff; border-bottom: 1px solid #e4e7ed;
+      display: flex; align-items: center; padding: 0 16px;
+      z-index: 1000; gap: 12px;
+    }
+    .nav-hamburger { font-size: 18px; color: #909399; cursor: pointer; }
+    .nav-logo { display: flex; align-items: center; margin-right: 12px; }
+    .nav-tabs { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .nav-tab {
+      padding: 3px 10px; border-radius: 12px; font-size: 12px;
+      color: #606266; cursor: pointer; white-space: nowrap;
+    }
+    .nav-tab.active { background: #ff7a00; color: #fff; }
+    .nav-tab.gpp { color: #67c23a; border: 1px solid #67c23a; }
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .nav-icon { font-size: 16px; color: #606266; cursor: pointer; }
+    .nav-todo { font-size: 13px; color: #606266; display: flex; align-items: center; gap: 4px; }
+    .todo-badge {
+      background: #f56c6c; color: #fff; border-radius: 10px;
+      padding: 0 5px; font-size: 11px; font-weight: 600;
+    }
+    .nav-support { font-size: 13px; color: #606266; cursor: pointer; }
+    .nav-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #c0c4cc; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: #fff;
+    }
+    .nav-admin-btn {
+      border: 1px solid #1677ff; color: #1677ff; background: transparent;
+      padding: 3px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* 左侧边栏 */
+    .sidebar {
+      position: fixed; top: 48px; left: 0; bottom: 0;
+      width: 200px; background: #1a5fa0;
+      display: flex; flex-direction: column;
+      z-index: 900; overflow-y: auto;
+    }
+    .sidebar-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-txt { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 3px; }
+    .sidebar-hamburger-btn { font-size: 18px; color: rgba(255,255,255,0.7); cursor: pointer; }
+    .sidebar-group { margin-top: 4px; }
+    .sidebar-group-title {
+      padding: 10px 16px 4px;
+      font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5);
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .sidebar-nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 16px; font-size: 13px; color: rgba(255,255,255,0.85);
+      cursor: pointer; transition: background 0.15s;
+      border-left: 3px solid transparent; text-decoration: none;
+    }
+    .sidebar-nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .sidebar-nav-item.active {
+      background: rgba(255,255,255,0.18); color: #fff;
+      border-left-color: #fff; font-weight: 600;
+    }
+    .sni-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    /* 主内容区 */
+    .main-content { margin-left: 200px; margin-top: 48px; }
+    .breadcrumb-bar {
+      height: 40px; background: #fff; border-bottom: 1px solid #e4e7ed;
+      padding: 0 20px; display: flex; align-items: center;
+      font-size: 13px; color: #909399; gap: 6px;
+    }
+    .breadcrumb-bar .sep { color: #c0c4cc; }
+    .breadcrumb-bar .current { color: #303133; font-weight: 500; }
+    .content-area { padding: 16px 20px; background: #f0f2f5; min-height: calc(100vh - 88px); }
+    .card {
+      background: #fff; border-radius: 4px; padding: 16px 20px;
+      margin-bottom: 12px;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-title { font-size: 14px; font-weight: 500; color: #303133; }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px 12px;
+      align-items: center;
+    }
+    .filter-btns { grid-column: 5; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+    .filter-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #606266; min-width: 0; }
+    /* 统一 label 宽度：6em 可容纳"采购计划编号"（最长 6 汉字），右对齐使所有控件左边缘对齐 */
+    .filter-item > span { white-space: nowrap; flex-shrink: 0; width: 6em; text-align: right; }
+    .filter-item .el-input,
+    .filter-item .el-select { flex: 1; min-width: 0; }
+    /* 覆盖 Element Plus daterange 默认 width:350px，让 flex:1 决定宽度 */
+    .filter-item .el-date-editor { flex: 1 !important; width: 0 !important; min-width: 0 !important; }
+    .link-primary { color: #1677ff; cursor: pointer; text-decoration: underline; font-size: 13px; }
+    .link-primary:hover { color: #4096ff; }
+    /* 主色覆盖：系统按钮主色为 #1677ff 蓝色（与截图一致） */
+    .el-button--primary { --el-button-bg-color: #1677ff; --el-button-border-color: #1677ff; --el-button-hover-bg-color: #4096ff; --el-button-hover-border-color: #4096ff; --el-button-active-bg-color: #0958d9; }
+    .el-button--primary.is-text { --el-button-text-color: #1677ff; --el-button-hover-bg-color: rgba(22,119,255,0.06); }
+    .el-button--danger.is-text { --el-button-text-color: #f5222d; --el-button-hover-bg-color: rgba(245,34,45,0.06); }
+    /* 驳回行高亮 */
+    .row-rejected td { background-color: #fff8f6 !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 顶部导航栏 -->
+  <div class="top-nav">
+    <span class="nav-hamburger">☰</span>
+    <div class="nav-logo">
+      <span style="color:#1677ff;font-weight:700;font-size:16px">Geek</span>
+      <span style="background:#ff7a00;color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-left:1px">+</span>
+    </div>
+    <div class="nav-tabs">
+      <span class="nav-tab">GOP</span>
+      <span class="nav-tab active">GPM</span>
+      <span class="nav-tab">SS</span>
+      <span class="nav-tab">CPQ</span>
+      <span class="nav-tab gpp">GPP</span>
+      <span class="nav-tab">GTS</span>
+      <span class="nav-tab">IS</span>
+      <span class="nav-tab">ACCOUNT</span>
+      <span class="nav-tab">OMS</span>
+      <span class="nav-tab">FTS</span>
+      <span class="nav-tab">GRP</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-icon">⊞</span>
+      <span class="nav-icon">⚙</span>
+      <span class="nav-todo">ToDo <span class="todo-badge">1232</span></span>
+      <span class="nav-support">支持 ∨</span>
+      <div class="nav-avatar"></div>
+      <button class="nav-admin-btn">进入管理后台</button>
+    </div>
+  </div>
+
+  <!-- 左侧边栏 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo-txt">GPM</span>
+      <span class="sidebar-hamburger-btn">☰</span>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">采购管理</div>
+      <a class="sidebar-nav-item active" href="../采购计划单列表/采购计划单列表.html">
+        <span class="sni-icon">📋</span>采购计划单列表
+      </a>
+      <a class="sidebar-nav-item" href="../我的采购任务/我的采购任务.html"><span class="sni-icon">📌</span>我的采购任务</a>
+      <a class="sidebar-nav-item" href="../采购台账/采购台账.html">
+        <span class="sni-icon">📊</span>采购台账
+      </a>
+      <a class="sidebar-nav-item" href="../采购计划审批/采购计划审批.html">
+        <span class="sni-icon">✅</span>采购计划审批
+      </a>
+      <a class="sidebar-nav-item" href="../供应商付款申请审批/供应商付款申请审批.html">
+        <span class="sni-icon">💰</span>供应商付款申请审批
+      </a>
+      <a class="sidebar-nav-item" href="../PO应付清单/PO应付清单.html">
+        <span class="sni-icon">📄</span>PO 应付清单
+      </a>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main-content">
+    <!-- 面包屑 -->
+    <div class="breadcrumb-bar">
+      <a class="link-primary" style="text-decoration:none;color:#909399;" href="../采购计划单列表/采购计划单列表.html">采购管理</a>
+      <span class="sep">/</span>
+      <span class="current">采购计划单列表</span>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content-area">
+      <!-- 筛选区 -->
+      <div class="card">
+        <div class="filter-grid">
+          <!-- 第一行：5 列筛选项（自动占满 grid 第 1 行） -->
+          <div class="filter-item">
+            <span>采购计划编号</span>
+            <el-input placeholder="请输入" size="small"></el-input>
+          </div>
+          <div class="filter-item">
+            <span>项目编号</span>
+            <el-input placeholder="请输入" size="small"></el-input>
+          </div>
+          <div class="filter-item">
+            <span>项目名称</span>
+            <el-input placeholder="请输入" size="small"></el-input>
+          </div>
+          <div class="filter-item">
+            <span>申请人</span>
+            <el-input placeholder="请输入" size="small"></el-input>
+          </div>
+          <div class="filter-item">
+            <span>审批状态</span>
+            <el-select placeholder="全部" size="small" clearable>
+              <el-option label="待审批" value="待审批"></el-option>
+              <el-option label="已通过" value="已通过"></el-option>
+              <el-option label="已驳回" value="已驳回"></el-option>
+            </el-select>
+          </div>
+          <!-- 第二行：申请日期在第 1 列（与采购计划编号列完全对齐），按钮在第 2 列 -->
+          <div class="filter-item">
+            <span>申请日期</span>
+            <el-date-picker type="daterange" size="small" range-separator="至"
+              start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
+          </div>
+          <div class="filter-btns">
+            <el-button type="primary" size="small">查询</el-button>
+            <el-button size="small">重置</el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 操作栏 + 表格 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">采购计划单列表</span>
+          <el-button type="primary" size="default" @click="goNew">新建采购计划</el-button>
+        </div>
+
+        <el-table
+          :data="tableData"
+          border
+          size="small"
+          style="width:100%"
+          :row-class-name="({ row }) => row.approvalStatus === '已驳回' ? 'row-rejected' : ''"
+        >
+          <el-table-column prop="applyNo" label="采购计划编号" min-width="130">
+            <template #default="{ row }">
+              <a class="link-primary" @click="goView(row)">{{ row.applyNo }}</a>
+            </template>
+          </el-table-column>
+          <el-table-column prop="projectNo" label="项目编号" min-width="120">
+            <template #default="{ row }">
+              <span>{{ row.projectNo || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="projectName" label="项目名称" min-width="200"></el-table-column>
+          <el-table-column prop="applicant" label="申请人" width="80"></el-table-column>
+          <el-table-column prop="applyDate" label="申请日期" width="110"></el-table-column>
+          <el-table-column label="审批状态" width="100">
+            <template #default="{ row }">
+              <el-tag
+                :type="row.approvalStatus === '待审批' ? 'warning' : row.approvalStatus === '已通过' ? 'success' : 'danger'"
+                size="small"
+              >{{ row.approvalStatus }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="采购跟进状态" width="120">
+            <template #default="{ row }">
+              <el-tag
+                :type="row.followStatus === '进行中' ? 'info' : ''"
+                :plain="row.followStatus === '已关闭'"
+                size="small"
+              >{{ row.followStatus }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="170" fixed="right">
+            <template #default="{ row }">
+              <el-button text type="primary" size="small" @click="goView(row)">
+                {{ row.approvalStatus === '已驳回' ? '查看' : '查看/编辑' }}
+              </el-button>
+              <el-button
+                v-if="row.approvalStatus === '已驳回'"
+                text type="danger" size="small"
+                @click="resubmit(row)"
+              >重新提交</el-button>
+              <el-button v-else text type="primary" size="small" @click="goLedger(row)">查看台账</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <el-pagination
+            layout="total, sizes, prev, pager, next"
+            :total="23"
+            :page-size="10"
+            :page-sizes="[10, 20, 50]"
+            background
+            small
+          ></el-pagination>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+const app = createApp({
+  data() {
+    return {
+      tableData: [
+        { applyNo: 'CG-2026-001', projectNo: 'GPMS260015', projectName: 'P-希音-CN-肇庆-电商-Ⅳ期', applicant: '张三', applyDate: '2026-06-10', approvalStatus: '待审批', followStatus: '进行中' },
+        { applyNo: 'CG-2026-002', projectNo: 'GPMS260062', projectName: 'P-UNILEVER-AR-仓库-Ⅰ期', applicant: '李四', applyDate: '2026-06-08', approvalStatus: '已通过', followStatus: '进行中' },
+        { applyNo: 'CG-2026-003', projectNo: 'GPMS250445', projectName: 'P-US ELOGISTICS-仓库', applicant: '王五', applyDate: '2026-05-20', approvalStatus: '已通过', followStatus: '已关闭' },
+        { applyNo: 'CG-2026-004', projectNo: 'GPMS250446', projectName: 'P-UNILEVER-ID-仓库-Ⅰ期', applicant: '赵六', applyDate: '2026-05-15', approvalStatus: '已驳回', followStatus: '进行中' },
+        { applyNo: 'CG-2026-005', projectNo: '', projectName: 'P-李宁-湖北-体育用品-CN', applicant: '陈七', applyDate: '2026-04-30', approvalStatus: '已通过', followStatus: '进行中' },
+      ]
+    };
+  },
+  methods: {
+    goNew() {
+      window.location.href = '../采购计划单/采购计划单.html';
+    },
+    goView(row) {
+      window.location.href = '../采购计划单/采购计划单.html?mode=view';
+    },
+    goLedger(row) {
+      window.location.href = '../采购台账/采购台账.html';
+    },
+    resubmit(row) {
+      window.location.href = '../采购计划单/采购计划单.html?mode=view';
+    }
+  }
+});
+app.use(ElementPlus);
+app.mount('#app');
+</script>
+</body>
+</html>

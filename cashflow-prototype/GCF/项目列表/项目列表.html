@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目列表 — GCF</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <style>
+    * { box-sizing:border-box;margin:0;padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5; }
+    .top-nav { position:fixed;top:0;left:0;right:0;height:48px;background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;padding:0 12px;z-index:1000;gap:8px; }
+    .nav-hamburger { font-size:18px;color:#909399;cursor:pointer;padding:0 4px; }
+    .nav-logo { display:flex;align-items:center;gap:2px;margin-right:10px; }
+    .nav-logo-text { color:#1677ff;font-weight:bold;font-size:16px; }
+    .nav-logo-plus { background:#ff7a00;color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;line-height:1; }
+    .nav-tabs { display:flex;align-items:center;gap:4px;flex:1; }
+    .nav-tab { font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;color:#606266;white-space:nowrap; }
+    .nav-tab.active { background:#ff7a00;color:#fff; }
+    .nav-tab.outline-green { border:1px solid #67c23a;color:#67c23a; }
+    .nav-right { display:flex;align-items:center;gap:10px;margin-left:8px; }
+    .nav-icon { font-size:16px;color:#606266;cursor:pointer; }
+    .nav-todo { position:relative;cursor:pointer;font-size:13px;color:#606266; }
+    .nav-badge { position:absolute;top:-8px;right:-28px;background:#f56c6c;color:#fff;font-size:10px;padding:1px 4px;border-radius:8px;white-space:nowrap; }
+    .nav-arrow { font-size:12px;color:#909399;margin-left:32px; }
+    .nav-avatar { width:26px;height:26px;border-radius:50%;background:#c0c4cc;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;cursor:pointer; }
+    .nav-admin-btn { border:1px solid #1677ff;color:#1677ff;background:transparent;padding:3px 10px;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap; }
+    .sidebar { position:fixed;top:48px;left:0;bottom:0;width:200px;background:#1a5fa0;display:flex;flex-direction:column;z-index:900;overflow-y:auto; }
+    .sidebar-header { padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+    .sidebar-logo-txt { font-size:20px;font-weight:700;color:#fff;letter-spacing:3px; }
+    .sidebar-hamburger-btn { font-size:18px;color:rgba(255,255,255,0.7);cursor:pointer; }
+    .sidebar-group { margin-top:4px; }
+    .sidebar-group-title { padding:10px 16px 4px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:1.5px;text-transform:uppercase; }
+    .sidebar-nav-item { display:flex;align-items:center;gap:8px;padding:9px 16px;font-size:13px;color:rgba(255,255,255,0.85);cursor:pointer;transition:background 0.15s;border-left:3px solid transparent;text-decoration:none; }
+    .sidebar-nav-item:hover { background:rgba(255,255,255,0.1);color:#fff; }
+    .sidebar-nav-item.active { background:rgba(255,255,255,0.18);color:#fff;border-left-color:#fff;font-weight:600; }
+    .sni-icon { font-size:14px;width:18px;text-align:center;flex-shrink:0; }
+    .main-wrapper { margin-left:200px;margin-top:48px; }
+    .breadcrumb-bar { height:40px;background:#fff;border-bottom:1px solid #e4e7ed;padding:0 20px;display:flex;align-items:center;font-size:13px;color:#909399; }
+    .breadcrumb-bar .sep { margin:0 6px; }
+    .breadcrumb-bar .current { color:#303133; }
+    .content-area { padding:16px 20px; }
+    .card { background:#fff;border-radius:4px;padding:16px 20px;margin-bottom:12px; }
+    .el-button--primary { --el-button-bg-color:#1677ff;--el-button-border-color:#1677ff;--el-button-hover-bg-color:#4096ff;--el-button-hover-border-color:#4096ff; }
+
+    /* Filter */
+    .filter-row { display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center; }
+    .filter-item { display:flex;align-items:center;gap:6px;font-size:13px;color:#606266; }
+    .filter-item > span { white-space:nowrap;flex-shrink:0; }
+    .filter-btns { margin-left:auto;display:flex;gap:8px; }
+
+    /* Status Badges */
+    .status-badge { font-size:11px;padding:2px 8px;border-radius:10px;white-space:nowrap;font-weight:500; }
+    .st-active    { background:#e6f4ff;color:#1677ff; }
+    .st-at-risk   { background:#fff2f0;color:#f56c6c;border:1px solid #ffccc7; }
+    .st-on-hold   { background:#f5f5f5;color:#909399;border:1px solid #d9d9d9; }
+    .st-completed { background:#f6ffed;color:#52c41a;border:1px solid #b7eb8f; }
+
+    /* Net cash colors */
+    .net-pos { color:#52c41a;font-weight:600; }
+    .net-neg { color:#f56c6c;font-weight:600; }
+
+    /* Health bar */
+    .health-bar-wrap { display:flex;align-items:center;gap:6px; }
+    .health-bar-bg { flex:1;height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;min-width:60px; }
+    .health-bar-fill { height:100%;border-radius:3px;transition:width 0.4s; }
+    .health-pct { font-size:11px;color:#909399;white-space:nowrap; }
+
+    /* Event badges */
+    .event-tag { font-size:11px;padding:1px 6px;border-radius:3px;white-space:nowrap;margin-right:3px; }
+    .ev-overdue  { background:#fff2f0;color:#f56c6c;border:1px solid #ffa39e; }
+    .ev-due-soon { background:#fff7e6;color:#e6a23c;border:1px solid #ffd591; }
+    .ev-ok       { background:#f6ffed;color:#52c41a;border:1px solid #b7eb8f; }
+
+    .cell-truncate { max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block; }
+    .pagination-bar { display:flex;justify-content:flex-end;padding-top:12px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top-nav">
+    <span class="nav-hamburger">☰</span>
+    <div class="nav-logo"><span class="nav-logo-text">Geek</span><span class="nav-logo-plus">+</span></div>
+    <div class="nav-tabs">
+      <span class="nav-tab">GOP</span><span class="nav-tab">GPM</span><span class="nav-tab">SS</span>
+      <span class="nav-tab">CPQ</span><span class="nav-tab outline-green">GPP</span><span class="nav-tab">GTS</span>
+      <span class="nav-tab">IS</span><span class="nav-tab">ACCOUNT</span><span class="nav-tab">OMS</span>
+      <span class="nav-tab">FTS</span><span class="nav-tab">GRP</span><span class="nav-tab active">GCF</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-icon">⊞</span><span class="nav-icon">⚙</span>
+      <span class="nav-todo">ToDo<span class="nav-badge">24</span></span>
+      <span class="nav-arrow">∨</span>
+      <div class="nav-avatar">U</div>
+      <button class="nav-admin-btn">进入管理后台</button>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-header"><span class="sidebar-logo-txt">GCF</span><span class="sidebar-hamburger-btn">☰</span></div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">现金流管理</div>
+      <a class="sidebar-nav-item" href="../../index.html"><span class="sni-icon">📊</span>全局总览</a>
+      <a class="sidebar-nav-item active" href="项目列表.html"><span class="sni-icon">📁</span>项目列表</a>
+      <a class="sidebar-nav-item" href="../收支明细/收支明细.html"><span class="sni-icon">📋</span>收支明细</a>
+      <a class="sidebar-nav-item" href="../月度预测/月度预测.html"><span class="sni-icon">📅</span>月度预测</a>
+      <a class="sidebar-nav-item" href="../应收账款/应收账款.html"><span class="sni-icon">💵</span>应收账款</a>
+      <a class="sidebar-nav-item" href="../应付账款/应付账款.html"><span class="sni-icon">💳</span>应付账款</a>
+    </div>
+  </div>
+
+  <div class="main-wrapper">
+    <div class="breadcrumb-bar">
+      <span>现金流管理</span><span class="sep">/</span><span class="current">项目列表</span>
+    </div>
+    <div class="content-area">
+
+      <!-- Filter -->
+      <div class="card">
+        <div class="filter-row">
+          <div class="filter-item">
+  <span>搜索</span>
+  <el-input v-model="searchText" placeholder="项目名称 / 客户" clearable style="width:180px;" size="small" @input="applyFilter" @clear="applyFilter"></el-input>
+</div>
+          <div class="filter-item"><span>项目状态</span>
+            <el-select v-model="filterStatus" placeholder="全部" size="small" clearable style="width:110px;">
+              <el-option label="进行中" value="active"></el-option>
+              <el-option label="风险"   value="at-risk"></el-option>
+              <el-option label="暂停"   value="on-hold"></el-option>
+              <el-option label="已完成" value="completed"></el-option>
+            </el-select>
+          </div>
+          <div class="filter-item"><span>大区</span>
+            <el-select v-model="filterRegion" placeholder="全部" size="small" clearable style="width:100px;">
+              <el-option v-for="r in regions" :key="r" :label="r" :value="r"></el-option>
+            </el-select>
+          </div>
+          <div class="filter-item"><span>PM</span>
+            <el-select v-model="filterPm" placeholder="全部" size="small" clearable style="width:90px;">
+              <el-option v-for="p in pms" :key="p" :label="p" :value="p"></el-option>
+            </el-select>
+          </div>
+          <div class="filter-btns">
+            <el-button type="primary" size="small" @click="applyFilter">查询</el-button>
+            <el-button size="small" @click="resetFilter">重置</el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:13px;color:#606266;">共 {{ filtered.length }} 个项目</span>
+        </div>
+        <el-table
+          :data="filtered"
+          border
+          style="width:100%;"
+          :header-cell-style="{ background:'#f5f7fa', color:'#606266', fontWeight:'600', fontSize:'13px' }"
+          :cell-style="{ fontSize:'13px', verticalAlign:'middle' }"
+          @row-click="goDetail"
+          :row-style="{ cursor:'pointer' }"
+        >
+          <el-table-column label="项目编号" prop="projectNo" width="120" sortable></el-table-column>
+          <el-table-column label="项目名称" min-width="200" sortable :sort-method="(a,b)=>a.name.localeCompare(b.name)">
+            <template #default="{ row }">
+              <span class="cell-truncate" :title="row.name" style="color:#1677ff;font-weight:500;">{{ row.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="客户" min-width="160" sortable :sort-method="(a,b)=>a.client.localeCompare(b.client)">
+            <template #default="{ row }">
+              <span class="cell-truncate" :title="row.client">{{ row.client }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="大区" prop="region" width="70" align="center" sortable></el-table-column>
+          <el-table-column label="PM" prop="pm" width="65" align="center" sortable></el-table-column>
+          <el-table-column label="状态" width="90" align="center" sortable :sort-method="(a,b)=>a.status.localeCompare(b.status)">
+            <template #default="{ row }">
+              <span class="status-badge" :class="stClass(row.status)">{{ stLabel(row.status) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="合同总额" width="120" align="right" sortable :sort-method="(a,b)=>a.contractValue-b.contractValue">
+            <template #default="{ row }">{{ fmtWan(row.contractValue) }}</template>
+          </el-table-column>
+          <el-table-column label="已回款" width="110" align="right" sortable :sort-method="(a,b)=>a.totalCollected-b.totalCollected">
+            <template #default="{ row }">{{ fmtWan(row.totalCollected) }}</template>
+          </el-table-column>
+          <el-table-column label="净现金流" width="120" align="right" sortable :sort-method="(a,b)=>a.netCash-b.netCash">
+            <template #default="{ row }">
+              <span :class="row.netCash >= 0 ? 'net-pos' : 'net-neg'">{{ fmtWanSigned(row.netCash) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="回款进度" width="160" sortable :sort-method="(a,b)=>healthPct(a)-healthPct(b)">
+            <template #default="{ row }">
+              <el-tooltip
+                :content="`已回款 ¥${(row.totalCollected/10000).toFixed(1)}万 / 合同额 ¥${(row.contractValue/10000).toFixed(1)}万  公式：已回款 ÷ 合同额 × 100%`"
+                placement="top">
+                <div class="health-bar-wrap" style="cursor:help;">
+                  <div class="health-bar-bg">
+                    <div class="health-bar-fill"
+                      :style="{ width: healthPct(row) + '%', background: healthColor(row) }">
+                    </div>
+                  </div>
+                  <span class="health-pct">{{ healthPct(row) }}%</span>
+                </div>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column label="近期事件" width="140">
+            <template #default="{ row }">
+              <span v-if="row.overdueAR.length"  class="event-tag ev-overdue">逾期 {{ row.overdueAR.length }} 笔</span>
+              <span v-if="row.dueSoon.length"     class="event-tag ev-due-soon">{{ row.dueSoon.length }} 笔近期到期</span>
+              <span v-if="!row.overdueAR.length && !row.dueSoon.length" class="event-tag ev-ok">正常</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="90" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" size="small" @click.stop="goDetail(row)">查看详情</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="pagination-bar">
+          <el-pagination background layout="total, prev, pager, next"
+            :total="filtered.length" :page-size="10" :current-page="1">
+          </el-pagination>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+<script>
+/* ─── Shared Mock Data (identical to index.html) ─── */
+const PROJECTS = [
+  { id:'PROJ-001', projectNo:'GPMS260015', name:'P-希音-CN-肇庆-电商-Ⅳ期',   client:'希音供应链（中国）有限公司',  region:'CN',   pm:'张三', status:'active',    contractValue:12000000 },
+  { id:'PROJ-002', projectNo:'GPMS260062', name:'P-UNILEVER-AR-仓库-Ⅰ期',     client:'Unilever Argentina S.A.',   region:'LATAM', pm:'李四', status:'at-risk',   contractValue:8500000  },
+  { id:'PROJ-003', projectNo:'GPMS250445', name:'P-US ELOGISTICS-CA-仓库',     client:'US Elogistics Inc.',        region:'NA',   pm:'王五', status:'active',    contractValue:5600000  },
+  { id:'PROJ-004', projectNo:'GPMS260031', name:'P-CEVA-DE-物流中心-Ⅱ期',     client:'CEVA Logistics GmbH',       region:'EU',   pm:'赵六', status:'on-hold',   contractValue:9200000  },
+  { id:'PROJ-005', projectNo:'GPMS250388', name:'P-LAZADA-TH-曼谷-仓库-Ⅲ期', client:'Lazada Thailand Co., Ltd', region:'APAC', pm:'陈七', status:'completed', contractValue:6800000  },
+  { id:'PROJ-006', projectNo:'GPMS260101', name:'P-京东-CN-上海-仓储-Ⅰ期',        client:'京东物流股份有限公司',           region:'CN',    pm:'张三', status:'active',    contractValue:9500000  },
+  { id:'PROJ-007', projectNo:'GPMS260118', name:'P-DHL-BR-圣保罗-物流中心',         client:'DHL Supply Chain Brasil Ltda',   region:'LATAM', pm:'李四', status:'active',    contractValue:7200000  },
+  { id:'PROJ-008', projectNo:'GPMS260133', name:'P-AMAZON-US-西雅图-自动化仓储',    client:'Amazon.com Services LLC',        region:'NA',    pm:'王五', status:'at-risk',   contractValue:11000000 },
+  { id:'PROJ-009', projectNo:'GPMS260147', name:'P-MAERSK-NL-鹿特丹-港口物流',     client:'Maersk Container Industry A/S',  region:'EU',    pm:'赵六', status:'active',    contractValue:8800000  },
+  { id:'PROJ-010', projectNo:'GPMS260159', name:'P-GRAB-SG-新加坡-仓库-Ⅰ期',      client:'Grab Holdings Ltd',              region:'APAC',  pm:'陈七', status:'active',    contractValue:5400000  },
+];
+const CASH_ENTRIES = [
+  { id:'CE-001', projectId:'PROJ-001', date:'2026-03-10', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:3600000, amountCny:3600000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-03-25', status:'confirmed' },
+  { id:'CE-002', projectId:'PROJ-001', date:'2026-03-22', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:3600000, amountCny:3600000, counterpart:'希音供应链（中国）有限公司',  dueDate:null,         status:'confirmed' },
+  { id:'CE-003', projectId:'PROJ-001', date:'2026-06-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2400000, amountCny:2400000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-06-20', status:'confirmed' },
+  { id:'CE-004', projectId:'PROJ-001', date:'2026-06-28', type:'receipt', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2400000, amountCny:2400000, counterpart:'希音供应链（中国）有限公司',  dueDate:null,         status:'confirmed' },
+  { id:'CE-005', projectId:'PROJ-001', date:'2026-09-01', type:'invoice', subtype:'验收款',   direction:'in',  currency:'CNY', amount:4800000, amountCny:4800000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-09-15', status:'pending'   },
+  { id:'CE-006', projectId:'PROJ-001', date:'2026-03-28', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'AAA供应链有限公司',          dueDate:null,         status:'confirmed' },
+  { id:'CE-007', projectId:'PROJ-001', date:'2026-05-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'上海博睿人力资源有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-008', projectId:'PROJ-001', date:'2026-06-24', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'BBB设备制造（苏州）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-009', projectId:'PROJ-001', date:'2026-07-03', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1200000, amountCny:1200000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-07-03', status:'pending'   },
+  { id:'CE-010', projectId:'PROJ-002', date:'2026-02-01', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2550000, amountCny:2550000, counterpart:'Unilever Argentina S.A.',   dueDate:'2026-02-20', status:'confirmed' },
+  { id:'CE-011', projectId:'PROJ-002', date:'2026-02-22', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2550000, amountCny:2550000, counterpart:'Unilever Argentina S.A.',   dueDate:null,         status:'confirmed' },
+  { id:'CE-012', projectId:'PROJ-002', date:'2026-04-15', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2125000, amountCny:2125000, counterpart:'Unilever Argentina S.A.',   dueDate:'2026-05-15', status:'overdue'   },
+  { id:'CE-013', projectId:'PROJ-002', date:'2026-03-10', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:3400000, amountCny:3400000, counterpart:'CCC物流设备有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-014', projectId:'PROJ-002', date:'2026-04-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'布宜诺斯艾利斯劳务公司',      dueDate:null,         status:'confirmed' },
+  { id:'CE-015', projectId:'PROJ-002', date:'2026-05-05', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:340000,  amountCny:340000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-016', projectId:'PROJ-002', date:'2026-07-05', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:850000,  amountCny:850000,  counterpart:'CCC物流设备有限公司',        dueDate:'2026-07-05', status:'pending'   },
+  { id:'CE-017', projectId:'PROJ-003', date:'2025-12-18', type:'receipt', subtype:'合同首款', direction:'in',  currency:'USD', amount:230000,  amountCny:1680000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
+  { id:'CE-018', projectId:'PROJ-003', date:'2026-03-22', type:'receipt', subtype:'进度款',   direction:'in',  currency:'USD', amount:153000,  amountCny:1120000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
+  { id:'CE-019', projectId:'PROJ-003', date:'2026-06-26', type:'receipt', subtype:'进度款',   direction:'in',  currency:'USD', amount:246000,  amountCny:1800000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
+  { id:'CE-020', projectId:'PROJ-003', date:'2026-01-15', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1120000, amountCny:1120000, counterpart:'DDD输送设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-021', projectId:'PROJ-003', date:'2026-04-10', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:185000,  amountCny:185000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-022', projectId:'PROJ-003', date:'2026-05-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:280000,  amountCny:280000,  counterpart:'洛杉矶工程服务公司',          dueDate:null,         status:'confirmed' },
+  { id:'CE-023', projectId:'PROJ-003', date:'2026-08-01', type:'invoice', subtype:'验收款',   direction:'in',  currency:'USD', amount:230000,  amountCny:1680000, counterpart:'US Elogistics Inc.',        dueDate:'2026-08-15', status:'pending'   },
+  { id:'CE-024', projectId:'PROJ-004', date:'2026-03-05', type:'receipt', subtype:'合同首款', direction:'in',  currency:'EUR', amount:340000,  amountCny:2760000, counterpart:'CEVA Logistics GmbH',       dueDate:null,         status:'confirmed' },
+  { id:'CE-025', projectId:'PROJ-004', date:'2026-06-22', type:'receipt', subtype:'预付款',   direction:'in',  currency:'EUR', amount:345000,  amountCny:2800000, counterpart:'CEVA Logistics GmbH',       dueDate:null,         status:'confirmed' },
+  { id:'CE-026', projectId:'PROJ-004', date:'2026-03-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1840000, amountCny:1840000, counterpart:'EEE工业设备（广州）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-027', projectId:'PROJ-004', date:'2026-04-15', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:456000,  amountCny:456000,  counterpart:'慕尼黑工程服务有限公司',      dueDate:null,         status:'confirmed' },
+  { id:'CE-028', projectId:'PROJ-004', date:'2026-07-05', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:920000,  amountCny:920000,  counterpart:'EEE工业设备（广州）有限公司', dueDate:'2026-07-05', status:'pending'   },
+  { id:'CE-029', projectId:'PROJ-005', date:'2025-07-22', type:'receipt', subtype:'合同首款', direction:'in',  currency:'THB', amount:5000000, amountCny:1020000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
+  { id:'CE-030', projectId:'PROJ-005', date:'2025-11-03', type:'receipt', subtype:'进度款',   direction:'in',  currency:'THB', amount:10000000,amountCny:2040000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
+  { id:'CE-031', projectId:'PROJ-005', date:'2026-06-23', type:'receipt', subtype:'验收尾款', direction:'in',  currency:'THB', amount:13300000,amountCny:2720000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
+  { id:'CE-032', projectId:'PROJ-005', date:'2025-08-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1400000, amountCny:1400000, counterpart:'FFF仓储设备有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-033', projectId:'PROJ-005', date:'2025-12-10', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'曼谷工程服务有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-034', projectId:'PROJ-005', date:'2026-05-15', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1360000, amountCny:1360000, counterpart:'GGG输送系统有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-035', projectId:'PROJ-005', date:'2026-06-10', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:170000,  amountCny:170000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
+  // ── PROJ-006 ─ 张三 / 京东物流 (上海仓储) ──
+  { id:'CE-036', projectId:'PROJ-006', date:'2026-04-10', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2850000, amountCny:2850000, counterpart:'京东物流股份有限公司',           dueDate:'2026-04-25', status:'confirmed' },
+  { id:'CE-037', projectId:'PROJ-006', date:'2026-04-25', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2850000, amountCny:2850000, counterpart:'京东物流股份有限公司',           dueDate:null,         status:'confirmed' },
+  { id:'CE-038', projectId:'PROJ-006', date:'2026-07-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1900000, amountCny:1900000, counterpart:'京东物流股份有限公司',           dueDate:'2026-07-20', status:'pending'   },
+  { id:'CE-039', projectId:'PROJ-006', date:'2026-04-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1500000, amountCny:1500000, counterpart:'HHH智能设备（苏州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-040', projectId:'PROJ-006', date:'2026-05-15', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:380000,  amountCny:380000,  counterpart:'上海博睿人力资源有限公司',       dueDate:null,         status:'confirmed' },
+  // ── PROJ-007 ─ 李四 / DHL Brazil (圣保罗物流中心) ──
+  { id:'CE-041', projectId:'PROJ-007', date:'2026-03-18', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2160000, amountCny:2160000, counterpart:'DHL Supply Chain Brasil Ltda',  dueDate:null,         status:'confirmed' },
+  { id:'CE-042', projectId:'PROJ-007', date:'2026-05-20', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'DHL Supply Chain Brasil Ltda',  dueDate:'2026-06-10', status:'overdue'   },
+  { id:'CE-043', projectId:'PROJ-007', date:'2026-03-25', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:2800000, amountCny:2800000, counterpart:'III仓储系统（广州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-044', projectId:'PROJ-007', date:'2026-05-08', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:320000,  amountCny:320000,  counterpart:'中远海运货运代理有限公司',       dueDate:null,         status:'confirmed' },
+  { id:'CE-045', projectId:'PROJ-007', date:'2026-06-15', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'圣保罗工程服务公司',             dueDate:'2026-07-05', status:'pending'   },
+  // ── PROJ-008 ─ 王五 / Amazon US (西雅图自动化仓储) ──
+  { id:'CE-046', projectId:'PROJ-008', date:'2026-03-10', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:3300000, amountCny:3300000, counterpart:'Amazon.com Services LLC',        dueDate:null,         status:'confirmed' },
+  { id:'CE-047', projectId:'PROJ-008', date:'2026-05-15', type:'invoice', subtype:'里程碑款', direction:'in',  currency:'CNY', amount:2750000, amountCny:2750000, counterpart:'Amazon.com Services LLC',        dueDate:'2026-06-01', status:'overdue'   },
+  { id:'CE-048', projectId:'PROJ-008', date:'2026-03-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:2100000, amountCny:2100000, counterpart:'JJJ自动化设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-049', projectId:'PROJ-008', date:'2026-04-28', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:650000,  amountCny:650000,  counterpart:'西雅图工程服务公司',             dueDate:null,         status:'confirmed' },
+  { id:'CE-050', projectId:'PROJ-008', date:'2026-06-01', type:'expense', subtype:'设备租赁', direction:'out', currency:'CNY', amount:420000,  amountCny:420000,  counterpart:'KKK设备租赁（上海）有限公司',   dueDate:null,         status:'confirmed' },
+  // ── PROJ-009 ─ 赵六 / Maersk (鹿特丹港口物流) ──
+  { id:'CE-051', projectId:'PROJ-009', date:'2026-05-20', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2640000, amountCny:2640000, counterpart:'Maersk Container Industry A/S',  dueDate:null,         status:'confirmed' },
+  { id:'CE-052', projectId:'PROJ-009', date:'2026-08-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2200000, amountCny:2200000, counterpart:'Maersk Container Industry A/S',  dueDate:'2026-08-20', status:'pending'   },
+  { id:'CE-053', projectId:'PROJ-009', date:'2026-05-28', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1760000, amountCny:1760000, counterpart:'EEE工业设备（广州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-054', projectId:'PROJ-009', date:'2026-06-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:520000,  amountCny:520000,  counterpart:'鹿特丹工程服务有限公司',         dueDate:null,         status:'confirmed' },
+  // ── PROJ-010 ─ 陈七 / Grab Singapore (新加坡仓库) ──
+  { id:'CE-055', projectId:'PROJ-010', date:'2026-05-05', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:1620000, amountCny:1620000, counterpart:'Grab Holdings Ltd',              dueDate:null,         status:'confirmed' },
+  { id:'CE-056', projectId:'PROJ-010', date:'2026-07-15', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1350000, amountCny:1350000, counterpart:'Grab Holdings Ltd',              dueDate:'2026-07-30', status:'pending'   },
+  { id:'CE-057', projectId:'PROJ-010', date:'2026-05-12', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:980000,  amountCny:980000,  counterpart:'LLL仓储设备有限公司',            dueDate:null,         status:'confirmed' },
+  { id:'CE-058', projectId:'PROJ-010', date:'2026-06-08', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:310000,  amountCny:310000,  counterpart:'新加坡工程服务公司',             dueDate:null,         status:'confirmed' },
+  { id:'CE-059', projectId:'PROJ-010', date:'2026-07-05', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:125000,  amountCny:125000,  counterpart:'中远海运货运代理有限公司',       dueDate:'2026-07-15', status:'pending'   },
+];
+
+const TODAY = new Date();
+const IN7   = new Date(+TODAY + 7*86400000);
+function sumAmt(arr) { return arr.reduce((s,e)=>s+e.amountCny,0); }
+function fmtWan(n) { const w=Math.abs(n)/10000; const s=w>=100?Math.round(w).toLocaleString():w.toFixed(1); return (n<0?'-':'')+'¥'+s+'万'; }
+function fmtWanSigned(n) { const w=Math.abs(n)/10000; const s=w>=100?Math.round(w).toLocaleString():w.toFixed(1); return (n<0?'-¥':'+¥')+s+'万'; }
+function summarize(id) {
+  const e = CASH_ENTRIES.filter(x=>x.projectId===id);
+  const totalCollected = sumAmt(e.filter(x=>x.type==='receipt'&&x.direction==='in'&&x.status==='confirmed'));
+  const totalExpenses  = sumAmt(e.filter(x=>x.type==='expense'&&x.direction==='out'&&x.status==='confirmed'));
+  const overdueAR  = e.filter(x=>x.status==='overdue'&&x.direction==='in');
+  const dueSoon    = e.filter(x=>x.status==='pending'&&x.dueDate&&new Date(x.dueDate)>=TODAY&&new Date(x.dueDate)<=IN7);
+  return { totalCollected, totalExpenses, netCash: totalCollected-totalExpenses, overdueAR, dueSoon };
+}
+
+const { createApp } = Vue;
+createApp({
+  data() {
+    const rows = PROJECTS.map(p=>({ ...p, ...summarize(p.id) }));
+    return {
+      rows,
+      filtered: [...rows],
+      searchText: '',
+      filterStatus: '',
+      filterRegion: '',
+      filterPm: '',
+      regions: [...new Set(PROJECTS.map(p=>p.region))],
+      pms:     [...new Set(PROJECTS.map(p=>p.pm))],
+    };
+  },
+  methods: {
+    fmtWan, fmtWanSigned,
+    stLabel(s) { return { active:'进行中','at-risk':'风险','on-hold':'暂停',completed:'已完成' }[s]??s; },
+    stClass(s) { return { active:'st-active','at-risk':'st-at-risk','on-hold':'st-on-hold',completed:'st-completed' }[s]??''; },
+    healthPct(row) {
+      if (!row.contractValue) return 0;
+      return Math.min(100, Math.round(row.totalCollected / row.contractValue * 100));
+    },
+    healthColor(row) {
+      if (row.status === 'at-risk' || row.netCash < 0) return '#f56c6c';
+      if (row.status === 'completed') return '#52c41a';
+      return '#1677ff';
+    },
+    applyFilter() {
+      this.filtered = this.rows.filter(r => {
+        if (this.searchText) {
+          const q = this.searchText.toLowerCase();
+          if (!r.name.toLowerCase().includes(q) && !r.client.toLowerCase().includes(q)) return false;
+        }
+        if (this.filterStatus && r.status !== this.filterStatus) return false;
+        if (this.filterRegion && r.region !== this.filterRegion) return false;
+        if (this.filterPm    && r.pm     !== this.filterPm)     return false;
+        return true;
+      });
+    },
+    resetFilter() {
+      this.searchText = ''; this.filterStatus = ''; this.filterRegion = ''; this.filterPm = '';
+      this.filtered = [...this.rows];
+    },
+    goDetail(row) {
+      window.location.href = `../项目详情/项目详情.html?id=${row.id}`;
+    },
+  },
+}).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

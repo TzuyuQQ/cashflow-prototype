@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>更新任务 - GPM</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+    .top-nav { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: #fff; border-bottom: 1px solid #e4e7ed; display: flex; align-items: center; padding: 0 12px; z-index: 1000; gap: 8px; }
+    .nav-hamburger { font-size: 18px; color: #909399; cursor: pointer; padding: 0 4px; }
+    .nav-logo { display: flex; align-items: center; gap: 2px; margin-right: 10px; }
+    .nav-logo-text { color: #1677ff; font-weight: bold; font-size: 16px; }
+    .nav-logo-plus { background: #ff7a00; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
+    .nav-tabs { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .nav-tab { font-size: 12px; padding: 3px 10px; border-radius: 12px; cursor: pointer; color: #606266; white-space: nowrap; }
+    .nav-tab.active { background: #ff7a00; color: #fff; }
+    .nav-tab.outline-green { border: 1px solid #67c23a; color: #67c23a; }
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: 8px; }
+    .nav-icon { font-size: 16px; color: #606266; cursor: pointer; }
+    .nav-todo { position: relative; cursor: pointer; font-size: 13px; color: #606266; }
+    .nav-badge { position: absolute; top: -8px; right: -28px; background: #f56c6c; color: #fff; font-size: 10px; padding: 1px 4px; border-radius: 8px; }
+    .nav-avatar { width: 26px; height: 26px; border-radius: 50%; background: #c0c4cc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; cursor: pointer; }
+    .nav-admin-btn { border: 1px solid #1677ff; color: #1677ff; background: transparent; padding: 3px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+
+    .sidebar { position: fixed; top: 48px; left: 0; bottom: 0; width: 200px; background: #1a5fa0; display: flex; flex-direction: column; z-index: 900; overflow-y: auto; }
+    .sidebar-header { padding: 14px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .sidebar-logo-txt { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 3px; }
+    .sidebar-hamburger-btn { font-size: 18px; color: rgba(255,255,255,0.7); cursor: pointer; }
+    .sidebar-group { margin-top: 4px; }
+    .sidebar-group-title { padding: 10px 16px 4px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); letter-spacing: 1.5px; text-transform: uppercase; }
+    .sidebar-nav-item { display: flex; align-items: center; gap: 8px; padding: 9px 16px; font-size: 13px; color: rgba(255,255,255,0.85); cursor: pointer; transition: background 0.15s; border-left: 3px solid transparent; text-decoration: none; }
+    .sidebar-nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .sidebar-nav-item.active { background: rgba(255,255,255,0.18); color: #fff; border-left-color: #fff; font-weight: 600; }
+    .sni-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    .main-content { margin-left: 200px; margin-top: 48px; padding-bottom: 80px; }
+    .breadcrumb-bar { height: 40px; background: #fff; border-bottom: 1px solid #e4e7ed; padding: 0 20px; display: flex; align-items: center; font-size: 13px; color: #909399; gap: 6px; }
+    .breadcrumb-bar .current { color: #303133; font-weight: 500; }
+    .content-area { padding: 16px 20px; }
+    .card { background: #fff; border-radius: 4px; padding: 16px 20px; margin-bottom: 12px; }
+    .card-title { font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #f0f2f5; }
+    .section-subtitle { font-size: 13px; font-weight: 600; color: #606266; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+    .section-subtitle::before { content: ''; display: inline-block; width: 3px; height: 14px; background: #1677ff; border-radius: 2px; }
+
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+    .form-grid-2 .full { grid-column: 1 / -1; }
+
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .dot-green  { background: #67c23a; }
+    .dot-yellow { background: #e6a23c; }
+    .dot-red    { background: #f56c6c; }
+    .dot-gray   { background: #c0c4cc; }
+
+    .fake-upload { border: 1px dashed #d9d9d9; border-radius: 6px; background: #fafafa; padding: 24px 20px; text-align: center; color: #909399; cursor: pointer; transition: border-color 0.2s; width: 100%; max-width: 520px; }
+    .fake-upload:hover { border-color: #1677ff; }
+    .fake-upload .upload-icon { font-size: 28px; margin-bottom: 6px; }
+    .fake-upload .upload-text { font-size: 13px; color: #606266; }
+    .fake-upload .upload-text span { color: #1677ff; }
+    .fake-upload .upload-sub { font-size: 11px; color: #c0c4cc; margin-top: 4px; }
+
+    .file-item { display: flex; align-items: center; padding: 6px 10px; background: #f5f7fa; border-radius: 4px; margin-top: 6px; font-size: 13px; color: #606266; max-width: 520px; }
+    .file-item .file-name { flex: 1; }
+    .file-item .file-del { color: #f56c6c; cursor: pointer; font-size: 12px; margin-left: 8px; }
+
+    .demo-tip { display: flex; align-items: center; background: #e6f4ff; border: 1px solid #91caff; border-radius: 4px; padding: 8px 14px; margin-bottom: 12px; font-size: 12px; color: #1677ff; }
+    .demo-tip .tip-label { flex-shrink: 0; }
+
+    .bottom-bar { position: fixed; bottom: 0; left: 200px; right: 0; height: 64px; background: #fff; box-shadow: 0 -2px 8px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; gap: 12px; z-index: 800; }
+
+    .el-form-item__label { font-size: 13px !important; }
+
+    .required-tip { font-size: 11px; color: #909399; margin-top: 3px; line-height: 1.4; }
+
+    .divider-line { border: none; border-top: 1px dashed #e4e7ed; margin: 20px 0; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <span class="nav-hamburger">☰</span>
+    <div class="nav-logo">
+      <span class="nav-logo-text">Geek</span>
+      <span class="nav-logo-plus">+</span>
+    </div>
+    <div class="nav-tabs">
+      <span class="nav-tab">GOP</span>
+      <span class="nav-tab active">GPM</span>
+      <span class="nav-tab">SS</span>
+      <span class="nav-tab">CPQ</span>
+      <span class="nav-tab outline-green">GPP</span>
+      <span class="nav-tab">GTS</span>
+      <span class="nav-tab">IS</span>
+      <span class="nav-tab">ACCOUNT</span>
+      <span class="nav-tab">OMS</span>
+      <span class="nav-tab">FTS</span>
+      <span class="nav-tab">GRP</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-icon">⊞</span>
+      <span class="nav-icon">⚙</span>
+      <span class="nav-todo">ToDo<span class="nav-badge">1232</span></span>
+      <div class="nav-avatar">U</div>
+      <button class="nav-admin-btn">进入管理后台</button>
+    </div>
+  </div>
+
+  <!-- 侧边栏 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo-txt">GPM</span>
+      <span class="sidebar-hamburger-btn">☰</span>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">采购管理</div>
+      <a class="sidebar-nav-item" href="../采购计划单列表/采购计划单列表.html"><span class="sni-icon">📋</span>采购计划单列表</a>
+      <a class="sidebar-nav-item active" href="../我的采购任务/我的采购任务.html"><span class="sni-icon">📌</span>我的采购任务</a>
+      <a class="sidebar-nav-item" href="../采购台账/采购台账.html"><span class="sni-icon">📊</span>采购台账</a>
+      <a class="sidebar-nav-item" href="../采购计划审批/采购计划审批.html"><span class="sni-icon">✅</span>采购计划审批</a>
+      <a class="sidebar-nav-item" href="../供应商付款申请审批/供应商付款申请审批.html"><span class="sni-icon">💰</span>供应商付款申请审批</a>
+      <a class="sidebar-nav-item" href="../PO应付清单/PO应付清单.html"><span class="sni-icon">📄</span>PO 应付清单</a>
+    </div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="main-content">
+    <div class="breadcrumb-bar">
+      <span>采购管理</span>
+      <span>/</span>
+      <a style="color:#1677ff;cursor:pointer;font-size:13px;" @click="goBack">我的采购任务</a>
+      <span>/</span>
+      <span class="current">更新任务</span>
+    </div>
+
+    <div class="content-area">
+
+      <div style="display:flex;align-items:center;margin-bottom:12px;">
+        <el-button link type="primary" @click="goBack" style="font-size:13px;padding:0;">
+          ← 返回列表
+        </el-button>
+      </div>
+
+      <!-- 原型演示切换 -->
+      <div class="demo-tip">
+        <span class="tip-label">原型演示：切换任务类型 →</span>
+        <el-select v-model="taskType" size="small" style="width:170px;margin-left:10px;">
+          <el-option label="定标完成" value="award"></el-option>
+          <el-option label="采购合同/PO签订" value="contract"></el-option>
+          <el-option label="技术文件细化" value="tech"></el-option>
+          <el-option label="招采要求发送" value="bid"></el-option>
+        </el-select>
+      </div>
+
+      <!-- Card 1：任务信息（只读） -->
+      <div class="card">
+        <div class="card-title">任务信息</div>
+        <el-descriptions :column="3" border size="small">
+          <el-descriptions-item label="采购计划编号">CG-2026-001</el-descriptions-item>
+          <el-descriptions-item label="项目名称" :span="2">P-希音-CN-肇庆-电商-Ⅳ期</el-descriptions-item>
+          <el-descriptions-item label="任务名称">
+            <el-tag type="primary" size="small">{{ taskConfig[taskType].label }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="计划完成日期">{{ taskConfig[taskType].planDate }}</el-descriptions-item>
+          <el-descriptions-item label="当前状态">
+            <span class="status-dot" :class="taskConfig[taskType].dotClass"></span>
+            <span style="font-size:12px;">{{ dotLabel(taskConfig[taskType].dotClass) }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="责任人">王采购</el-descriptions-item>
+          <el-descriptions-item label="交付物要求" :span="2">
+            <el-tag size="small" type="info">{{ taskConfig[taskType].deliverable }}</el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+
+      <!-- Card 2：填写完成信息 -->
+      <div class="card">
+        <div class="card-title">填写完成信息</div>
+
+        <!-- ① 中标信息 — 仅「定标完成」显示 -->
+        <template v-if="taskType === 'award'">
+          <div class="section-subtitle">中标信息</div>
+          <el-form :model="awardForm" label-width="110px" size="small">
+            <div class="form-grid-2">
+              <el-form-item label="中标供应商" required>
+                <el-input v-model="awardForm.supplier" placeholder="请填写中标供应商全称"></el-input>
+              </el-form-item>
+              <el-form-item label="定标时间" required>
+                <el-date-picker v-model="awardForm.awardDate" type="date" placeholder="请选择" style="width:100%;"></el-date-picker>
+              </el-form-item>
+              <el-form-item label="原币币种" required>
+                <el-select v-model="awardForm.currency" placeholder="请选择" style="width:100%;">
+                  <el-option label="USD（美元）" value="USD"></el-option>
+                  <el-option label="CNY（人民币）" value="CNY"></el-option>
+                  <el-option label="EUR（欧元）" value="EUR"></el-option>
+                  <el-option label="GBP（英镑）" value="GBP"></el-option>
+                  <el-option label="ARS（阿根廷比索）" value="ARS"></el-option>
+                  <el-option label="SGD（新加坡元）" value="SGD"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="原币价格" required>
+                <el-input v-model="awardForm.price" placeholder="请输入金额（如 500,000.00）" style="width:100%;">
+                  <template #prepend>{{ awardForm.currency || '—' }}</template>
+                </el-input>
+              </el-form-item>
+            </div>
+          </el-form>
+          <div class="divider-line"></div>
+          <div class="section-subtitle">任务完成信息</div>
+        </template>
+
+        <!-- ② 通用完成信息 -->
+        <el-form :model="completionForm" label-width="110px" size="small">
+
+          <el-form-item label="实际完成日期" required>
+            <el-date-picker v-model="completionForm.actualDate" type="date" placeholder="请选择实际完成日期" style="width:220px;"></el-date-picker>
+            <div class="required-tip">实际日期早于计划日期：标记为「已完成」；晚于计划日期：标记为「已完成（含延期）」</div>
+          </el-form-item>
+
+          <el-form-item :label="taskConfig[taskType].uploadLabel">
+            <div>
+              <div class="fake-upload">
+                <div class="upload-icon">📎</div>
+                <div class="upload-text"><span>点击上传</span>或拖拽文件到此处</div>
+                <div class="upload-sub">支持 .pdf .doc .docx .jpg .png .zip</div>
+              </div>
+              <!-- 已上传示例（合同节点默认展示） -->
+              <template v-if="taskType === 'contract'">
+                <div class="file-item">
+                  <span style="margin-right:6px;">📄</span>
+                  <span class="file-name">采购合同_希音肇庆IV期_V2.0.pdf</span>
+                  <el-tag size="small" type="success" style="margin-left:8px;">已上传</el-tag>
+                  <span class="file-del">删除</span>
+                </div>
+                <div class="file-item">
+                  <span style="margin-right:6px;">📄</span>
+                  <span class="file-name">PO20260001_签字版.pdf</span>
+                  <el-tag size="small" type="success" style="margin-left:8px;">已上传</el-tag>
+                  <span class="file-del">删除</span>
+                </div>
+              </template>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="备注">
+            <el-input
+              type="textarea"
+              :rows="3"
+              v-model="completionForm.remark"
+              placeholder="如有补充说明可填写"
+              style="width:520px;"
+            ></el-input>
+          </el-form-item>
+
+        </el-form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 底部操作栏 -->
+  <div class="bottom-bar">
+    <el-button @click="goBack">取消</el-button>
+    <el-button type="primary" @click="submit">确认完成</el-button>
+  </div>
+
+</div>
+<script>
+const { createApp } = Vue;
+const app = createApp({
+  data() {
+    return {
+      taskType: 'award',
+
+      taskConfig: {
+        award:    { label: '定标完成',       planDate: '2026-07-21', dotClass: 'dot-yellow', deliverable: '填写中标信息',         uploadLabel: '定标相关文件' },
+        contract: { label: '采购合同/PO签订', planDate: '2026-07-26', dotClass: 'dot-gray',   deliverable: '上传合同/PO相关文件',   uploadLabel: '合同/PO文件（必传）' },
+        tech:     { label: '技术文件细化',    planDate: '2026-07-10', dotClass: 'dot-green',  deliverable: '上传技术文件',          uploadLabel: '技术文件' },
+        bid:      { label: '招采要求发送',    planDate: '2026-07-11', dotClass: 'dot-green',  deliverable: '上传招采邮件截图或招采文件', uploadLabel: '招采相关文件' },
+      },
+
+      awardForm: {
+        supplier: '',
+        awardDate: '',
+        currency: 'USD',
+        price: '',
+      },
+
+      completionForm: {
+        actualDate: '',
+        remark: '',
+      },
+    };
+  },
+  methods: {
+    dotLabel(cls) {
+      return { 'dot-green': '已完成', 'dot-yellow': '临近截止（≤5天）', 'dot-red': '已逾期', 'dot-gray': '已完成（含延期）' }[cls] || '-';
+    },
+    goBack() {
+      window.location.href = '../我的采购任务/我的采购任务.html';
+    },
+    submit() {
+      if (this.taskType === 'award') {
+        if (!this.awardForm.supplier.trim() || !this.awardForm.currency || !this.awardForm.price.trim() || !this.awardForm.awardDate) {
+          ElementPlus.ElMessage.warning('请填写完整的中标信息');
+          return;
+        }
+      }
+      if (!this.completionForm.actualDate) {
+        ElementPlus.ElMessage.warning('请填写实际完成日期');
+        return;
+      }
+      ElementPlus.ElMessage.success(`「${this.taskConfig[this.taskType].label}」任务已标记为完成`);
+      setTimeout(() => {
+        window.location.href = '../我的采购任务/我的采购任务.html';
+      }, 1200);
+    },
+  },
+});
+app.use(ElementPlus);
+app.mount('#app');
+</script>
+</body>
+</html>
