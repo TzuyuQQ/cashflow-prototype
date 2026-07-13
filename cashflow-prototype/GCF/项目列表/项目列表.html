@@ -73,6 +73,9 @@
 
     .cell-truncate { max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block; }
     .pagination-bar { display:flex;justify-content:flex-end;padding-top:12px; }
+    .info-tip { display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#bfbfbf;color:#fff;font-size:9px;font-weight:700;font-style:italic;cursor:help;position:relative;margin-left:4px;vertical-align:middle;flex-shrink:0; }
+    .info-tip::after { content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;font-weight:400;font-style:normal;white-space:normal;width:380px;line-height:1.6;text-align:left;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:9999; }
+    .info-tip:hover::after { opacity:1; }
   </style>
 </head>
 <body>
@@ -104,8 +107,6 @@
       <a class="sidebar-nav-item active" href="项目列表.html"><span class="sni-icon">📁</span>项目列表</a>
       <a class="sidebar-nav-item" href="../收支明细/收支明细.html"><span class="sni-icon">📋</span>收支明细</a>
       <a class="sidebar-nav-item" href="../月度预测/月度预测.html"><span class="sni-icon">📅</span>月度预测</a>
-      <a class="sidebar-nav-item" href="../应收账款/应收账款.html"><span class="sni-icon">💵</span>应收账款</a>
-      <a class="sidebar-nav-item" href="../应付账款/应付账款.html"><span class="sni-icon">💳</span>应付账款</a>
     </div>
   </div>
 
@@ -180,12 +181,15 @@
             </template>
           </el-table-column>
           <el-table-column label="合同总额" width="120" align="right" sortable :sort-method="(a,b)=>a.contractValue-b.contractValue">
+            <template #header>合同总额 <span class="info-tip" data-tip="合同签订时约定的总金额，已统一换算为人民币万元展示；多币种项目按签约时汇率折算">i</span></template>
             <template #default="{ row }">{{ fmtWan(row.contractValue) }}</template>
           </el-table-column>
           <el-table-column label="已回款" width="110" align="right" sortable :sort-method="(a,b)=>a.totalCollected-b.totalCollected">
+            <template #header>已回款 <span class="info-tip" data-tip="本项目中，客户实际打款且状态为已确认的回款记录金额合计（人民币）；待处理及逾期款不计入">i</span></template>
             <template #default="{ row }">{{ fmtWan(row.totalCollected) }}</template>
           </el-table-column>
           <el-table-column label="净现金流" width="120" align="right" sortable :sort-method="(a,b)=>a.netCash-b.netCash">
+            <template #header>净现金流 <span class="info-tip" data-tip="已回款 − 已确认支出；正值（绿色）表示项目现金净流入，负值（红色）说明支出已超过回款，存在资金垫付">i</span></template>
             <template #default="{ row }">
               <span :class="row.netCash >= 0 ? 'net-pos' : 'net-neg'">{{ fmtWanSigned(row.netCash) }}</span>
             </template>
@@ -207,6 +211,7 @@
             </template>
           </el-table-column>
           <el-table-column label="近期事件" width="140">
+            <template #header>近期事件 <span class="info-tip" data-tip="逾期：已开票但超过到期日仍未收款；近期到期：到期日在今日起 7 天内的待处理应收款；两者均无则显示正常">i</span></template>
             <template #default="{ row }">
               <span v-if="row.overdueAR.length"  class="event-tag ev-overdue">逾期 {{ row.overdueAR.length }} 笔</span>
               <span v-if="row.dueSoon.length"     class="event-tag ev-due-soon">{{ row.dueSoon.length }} 笔近期到期</span>
@@ -252,65 +257,96 @@ const CASH_ENTRIES = [
   { id:'CE-003', projectId:'PROJ-001', date:'2026-06-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2400000, amountCny:2400000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-06-20', status:'confirmed' },
   { id:'CE-004', projectId:'PROJ-001', date:'2026-06-28', type:'receipt', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2400000, amountCny:2400000, counterpart:'希音供应链（中国）有限公司',  dueDate:null,         status:'confirmed' },
   { id:'CE-005', projectId:'PROJ-001', date:'2026-09-01', type:'invoice', subtype:'验收款',   direction:'in',  currency:'CNY', amount:4800000, amountCny:4800000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-09-15', status:'pending'   },
-  { id:'CE-006', projectId:'PROJ-001', date:'2026-03-28', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'AAA供应链有限公司',          dueDate:null,         status:'confirmed' },
-  { id:'CE-007', projectId:'PROJ-001', date:'2026-05-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'上海博睿人力资源有限公司',    dueDate:null,         status:'confirmed' },
-  { id:'CE-008', projectId:'PROJ-001', date:'2026-06-24', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'BBB设备制造（苏州）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-006', projectId:'PROJ-001', date:'2026-03-28', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'AAA供应链有限公司',          dueDate:null,         status:'confirmed' },
+  { id:'CE-007', projectId:'PROJ-001', date:'2026-05-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'上海博睿人力资源有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-008', projectId:'PROJ-001', date:'2026-06-24', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'BBB设备制造（苏州）有限公司', dueDate:null,         status:'confirmed' },
   { id:'CE-009', projectId:'PROJ-001', date:'2026-07-03', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1200000, amountCny:1200000, counterpart:'希音供应链（中国）有限公司',  dueDate:'2026-07-03', status:'pending'   },
   { id:'CE-010', projectId:'PROJ-002', date:'2026-02-01', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2550000, amountCny:2550000, counterpart:'Unilever Argentina S.A.',   dueDate:'2026-02-20', status:'confirmed' },
   { id:'CE-011', projectId:'PROJ-002', date:'2026-02-22', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2550000, amountCny:2550000, counterpart:'Unilever Argentina S.A.',   dueDate:null,         status:'confirmed' },
   { id:'CE-012', projectId:'PROJ-002', date:'2026-04-15', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2125000, amountCny:2125000, counterpart:'Unilever Argentina S.A.',   dueDate:'2026-05-15', status:'overdue'   },
-  { id:'CE-013', projectId:'PROJ-002', date:'2026-03-10', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:3400000, amountCny:3400000, counterpart:'CCC物流设备有限公司',        dueDate:null,         status:'confirmed' },
-  { id:'CE-014', projectId:'PROJ-002', date:'2026-04-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'布宜诺斯艾利斯劳务公司',      dueDate:null,         status:'confirmed' },
-  { id:'CE-015', projectId:'PROJ-002', date:'2026-05-05', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:340000,  amountCny:340000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
-  { id:'CE-016', projectId:'PROJ-002', date:'2026-07-05', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:850000,  amountCny:850000,  counterpart:'CCC物流设备有限公司',        dueDate:'2026-07-05', status:'pending'   },
+  { id:'CE-013', projectId:'PROJ-002', date:'2026-03-10', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:3400000, amountCny:3400000, counterpart:'CCC物流设备有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-014', projectId:'PROJ-002', date:'2026-04-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'布宜诺斯艾利斯劳务公司',      dueDate:null,         status:'confirmed' },
+  { id:'CE-015', projectId:'PROJ-002', date:'2026-05-05', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:340000,  amountCny:340000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-016', projectId:'PROJ-002', date:'2026-07-05', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:850000,  amountCny:850000,  counterpart:'CCC物流设备有限公司',        dueDate:'2026-07-05', status:'pending'   },
   { id:'CE-017', projectId:'PROJ-003', date:'2025-12-18', type:'receipt', subtype:'合同首款', direction:'in',  currency:'USD', amount:230000,  amountCny:1680000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
   { id:'CE-018', projectId:'PROJ-003', date:'2026-03-22', type:'receipt', subtype:'进度款',   direction:'in',  currency:'USD', amount:153000,  amountCny:1120000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
   { id:'CE-019', projectId:'PROJ-003', date:'2026-06-26', type:'receipt', subtype:'进度款',   direction:'in',  currency:'USD', amount:246000,  amountCny:1800000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
-  { id:'CE-020', projectId:'PROJ-003', date:'2026-01-15', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1120000, amountCny:1120000, counterpart:'DDD输送设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
-  { id:'CE-021', projectId:'PROJ-003', date:'2026-04-10', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:185000,  amountCny:185000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
-  { id:'CE-022', projectId:'PROJ-003', date:'2026-05-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:280000,  amountCny:280000,  counterpart:'洛杉矶工程服务公司',          dueDate:null,         status:'confirmed' },
+  { id:'CE-020', projectId:'PROJ-003', date:'2026-01-15', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1120000, amountCny:1120000, counterpart:'DDD输送设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-021', projectId:'PROJ-003', date:'2026-04-10', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:185000,  amountCny:185000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-022', projectId:'PROJ-003', date:'2026-05-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:280000,  amountCny:280000,  counterpart:'洛杉矶工程服务公司',          dueDate:null,         status:'confirmed' },
   { id:'CE-023', projectId:'PROJ-003', date:'2026-08-01', type:'invoice', subtype:'验收款',   direction:'in',  currency:'USD', amount:230000,  amountCny:1680000, counterpart:'US Elogistics Inc.',        dueDate:'2026-08-15', status:'pending'   },
   { id:'CE-024', projectId:'PROJ-004', date:'2026-03-05', type:'receipt', subtype:'合同首款', direction:'in',  currency:'EUR', amount:340000,  amountCny:2760000, counterpart:'CEVA Logistics GmbH',       dueDate:null,         status:'confirmed' },
   { id:'CE-025', projectId:'PROJ-004', date:'2026-06-22', type:'receipt', subtype:'预付款',   direction:'in',  currency:'EUR', amount:345000,  amountCny:2800000, counterpart:'CEVA Logistics GmbH',       dueDate:null,         status:'confirmed' },
-  { id:'CE-026', projectId:'PROJ-004', date:'2026-03-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1840000, amountCny:1840000, counterpart:'EEE工业设备（广州）有限公司', dueDate:null,         status:'confirmed' },
-  { id:'CE-027', projectId:'PROJ-004', date:'2026-04-15', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:456000,  amountCny:456000,  counterpart:'慕尼黑工程服务有限公司',      dueDate:null,         status:'confirmed' },
-  { id:'CE-028', projectId:'PROJ-004', date:'2026-07-05', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:920000,  amountCny:920000,  counterpart:'EEE工业设备（广州）有限公司', dueDate:'2026-07-05', status:'pending'   },
+  { id:'CE-026', projectId:'PROJ-004', date:'2026-03-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1840000, amountCny:1840000, counterpart:'EEE工业设备（广州）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-027', projectId:'PROJ-004', date:'2026-04-15', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:456000,  amountCny:456000,  counterpart:'慕尼黑工程服务有限公司',      dueDate:null,         status:'confirmed' },
+  { id:'CE-028', projectId:'PROJ-004', date:'2026-07-05', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:920000,  amountCny:920000,  counterpart:'EEE工业设备（广州）有限公司', dueDate:'2026-07-05', status:'pending'   },
   { id:'CE-029', projectId:'PROJ-005', date:'2025-07-22', type:'receipt', subtype:'合同首款', direction:'in',  currency:'THB', amount:5000000, amountCny:1020000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
   { id:'CE-030', projectId:'PROJ-005', date:'2025-11-03', type:'receipt', subtype:'进度款',   direction:'in',  currency:'THB', amount:10000000,amountCny:2040000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
   { id:'CE-031', projectId:'PROJ-005', date:'2026-06-23', type:'receipt', subtype:'验收尾款', direction:'in',  currency:'THB', amount:13300000,amountCny:2720000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
-  { id:'CE-032', projectId:'PROJ-005', date:'2025-08-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1400000, amountCny:1400000, counterpart:'FFF仓储设备有限公司',        dueDate:null,         status:'confirmed' },
-  { id:'CE-033', projectId:'PROJ-005', date:'2025-12-10', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'曼谷工程服务有限公司',        dueDate:null,         status:'confirmed' },
-  { id:'CE-034', projectId:'PROJ-005', date:'2026-05-15', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1360000, amountCny:1360000, counterpart:'GGG输送系统有限公司',        dueDate:null,         status:'confirmed' },
-  { id:'CE-035', projectId:'PROJ-005', date:'2026-06-10', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:170000,  amountCny:170000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
+  { id:'CE-032', projectId:'PROJ-005', date:'2025-08-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1400000, amountCny:1400000, counterpart:'FFF仓储设备有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-033', projectId:'PROJ-005', date:'2025-12-10', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'曼谷工程服务有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-034', projectId:'PROJ-005', date:'2026-05-15', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1360000, amountCny:1360000, counterpart:'GGG输送系统有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-035', projectId:'PROJ-005', date:'2026-06-10', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:170000,  amountCny:170000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
   // ── PROJ-006 ─ 张三 / 京东物流 (上海仓储) ──
   { id:'CE-036', projectId:'PROJ-006', date:'2026-04-10', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2850000, amountCny:2850000, counterpart:'京东物流股份有限公司',           dueDate:'2026-04-25', status:'confirmed' },
   { id:'CE-037', projectId:'PROJ-006', date:'2026-04-25', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2850000, amountCny:2850000, counterpart:'京东物流股份有限公司',           dueDate:null,         status:'confirmed' },
   { id:'CE-038', projectId:'PROJ-006', date:'2026-07-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1900000, amountCny:1900000, counterpart:'京东物流股份有限公司',           dueDate:'2026-07-20', status:'pending'   },
-  { id:'CE-039', projectId:'PROJ-006', date:'2026-04-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1500000, amountCny:1500000, counterpart:'HHH智能设备（苏州）有限公司',   dueDate:null,         status:'confirmed' },
-  { id:'CE-040', projectId:'PROJ-006', date:'2026-05-15', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:380000,  amountCny:380000,  counterpart:'上海博睿人力资源有限公司',       dueDate:null,         status:'confirmed' },
+  { id:'CE-039', projectId:'PROJ-006', date:'2026-04-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1500000, amountCny:1500000, counterpart:'HHH智能设备（苏州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-040', projectId:'PROJ-006', date:'2026-05-15', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:380000,  amountCny:380000,  counterpart:'上海博睿人力资源有限公司',       dueDate:null,         status:'confirmed' },
   // ── PROJ-007 ─ 李四 / DHL Brazil (圣保罗物流中心) ──
   { id:'CE-041', projectId:'PROJ-007', date:'2026-03-18', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2160000, amountCny:2160000, counterpart:'DHL Supply Chain Brasil Ltda',  dueDate:null,         status:'confirmed' },
   { id:'CE-042', projectId:'PROJ-007', date:'2026-05-20', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'DHL Supply Chain Brasil Ltda',  dueDate:'2026-06-10', status:'overdue'   },
-  { id:'CE-043', projectId:'PROJ-007', date:'2026-03-25', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:2800000, amountCny:2800000, counterpart:'III仓储系统（广州）有限公司',   dueDate:null,         status:'confirmed' },
-  { id:'CE-044', projectId:'PROJ-007', date:'2026-05-08', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:320000,  amountCny:320000,  counterpart:'中远海运货运代理有限公司',       dueDate:null,         status:'confirmed' },
-  { id:'CE-045', projectId:'PROJ-007', date:'2026-06-15', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'圣保罗工程服务公司',             dueDate:'2026-07-05', status:'pending'   },
+  { id:'CE-043', projectId:'PROJ-007', date:'2026-03-25', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:2800000, amountCny:2800000, counterpart:'III仓储系统（广州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-044', projectId:'PROJ-007', date:'2026-05-08', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:320000,  amountCny:320000,  counterpart:'中远海运货运代理有限公司',       dueDate:null,         status:'confirmed' },
+  { id:'CE-045', projectId:'PROJ-007', date:'2026-06-15', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'圣保罗工程服务公司',             dueDate:'2026-07-05', status:'pending'   },
   // ── PROJ-008 ─ 王五 / Amazon US (西雅图自动化仓储) ──
   { id:'CE-046', projectId:'PROJ-008', date:'2026-03-10', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:3300000, amountCny:3300000, counterpart:'Amazon.com Services LLC',        dueDate:null,         status:'confirmed' },
   { id:'CE-047', projectId:'PROJ-008', date:'2026-05-15', type:'invoice', subtype:'里程碑款', direction:'in',  currency:'CNY', amount:2750000, amountCny:2750000, counterpart:'Amazon.com Services LLC',        dueDate:'2026-06-01', status:'overdue'   },
-  { id:'CE-048', projectId:'PROJ-008', date:'2026-03-20', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:2100000, amountCny:2100000, counterpart:'JJJ自动化设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
-  { id:'CE-049', projectId:'PROJ-008', date:'2026-04-28', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:650000,  amountCny:650000,  counterpart:'西雅图工程服务公司',             dueDate:null,         status:'confirmed' },
-  { id:'CE-050', projectId:'PROJ-008', date:'2026-06-01', type:'expense', subtype:'设备租赁', direction:'out', currency:'CNY', amount:420000,  amountCny:420000,  counterpart:'KKK设备租赁（上海）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-048', projectId:'PROJ-008', date:'2026-03-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:2100000, amountCny:2100000, counterpart:'JJJ自动化设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-049', projectId:'PROJ-008', date:'2026-04-28', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:650000,  amountCny:650000,  counterpart:'西雅图工程服务公司',             dueDate:null,         status:'confirmed' },
+  { id:'CE-050', projectId:'PROJ-008', date:'2026-06-01', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:420000,  amountCny:420000,  counterpart:'KKK设备租赁（上海）有限公司',   dueDate:null,         status:'confirmed' },
   // ── PROJ-009 ─ 赵六 / Maersk (鹿特丹港口物流) ──
   { id:'CE-051', projectId:'PROJ-009', date:'2026-05-20', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2640000, amountCny:2640000, counterpart:'Maersk Container Industry A/S',  dueDate:null,         status:'confirmed' },
   { id:'CE-052', projectId:'PROJ-009', date:'2026-08-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2200000, amountCny:2200000, counterpart:'Maersk Container Industry A/S',  dueDate:'2026-08-20', status:'pending'   },
-  { id:'CE-053', projectId:'PROJ-009', date:'2026-05-28', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:1760000, amountCny:1760000, counterpart:'EEE工业设备（广州）有限公司',   dueDate:null,         status:'confirmed' },
-  { id:'CE-054', projectId:'PROJ-009', date:'2026-06-20', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:520000,  amountCny:520000,  counterpart:'鹿特丹工程服务有限公司',         dueDate:null,         status:'confirmed' },
+  { id:'CE-053', projectId:'PROJ-009', date:'2026-05-28', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1760000, amountCny:1760000, counterpart:'EEE工业设备（广州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-054', projectId:'PROJ-009', date:'2026-06-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:520000,  amountCny:520000,  counterpart:'鹿特丹工程服务有限公司',         dueDate:null,         status:'confirmed' },
   // ── PROJ-010 ─ 陈七 / Grab Singapore (新加坡仓库) ──
   { id:'CE-055', projectId:'PROJ-010', date:'2026-05-05', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:1620000, amountCny:1620000, counterpart:'Grab Holdings Ltd',              dueDate:null,         status:'confirmed' },
   { id:'CE-056', projectId:'PROJ-010', date:'2026-07-15', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1350000, amountCny:1350000, counterpart:'Grab Holdings Ltd',              dueDate:'2026-07-30', status:'pending'   },
-  { id:'CE-057', projectId:'PROJ-010', date:'2026-05-12', type:'expense', subtype:'采购付款', direction:'out', currency:'CNY', amount:980000,  amountCny:980000,  counterpart:'LLL仓储设备有限公司',            dueDate:null,         status:'confirmed' },
-  { id:'CE-058', projectId:'PROJ-010', date:'2026-06-08', type:'expense', subtype:'人工费',   direction:'out', currency:'CNY', amount:310000,  amountCny:310000,  counterpart:'新加坡工程服务公司',             dueDate:null,         status:'confirmed' },
-  { id:'CE-059', projectId:'PROJ-010', date:'2026-07-05', type:'expense', subtype:'运费',     direction:'out', currency:'CNY', amount:125000,  amountCny:125000,  counterpart:'中远海运货运代理有限公司',       dueDate:'2026-07-15', status:'pending'   },
+  { id:'CE-057', projectId:'PROJ-010', date:'2026-05-12', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:980000,  amountCny:980000,  counterpart:'LLL仓储设备有限公司',            dueDate:null,         status:'confirmed' },
+  { id:'CE-058', projectId:'PROJ-010', date:'2026-06-08', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:310000,  amountCny:310000,  counterpart:'新加坡工程服务公司',             dueDate:null,         status:'confirmed' },
+  { id:'CE-059', projectId:'PROJ-010', date:'2026-07-05', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:125000,  amountCny:125000,  counterpart:'中远海运货运代理有限公司',       dueDate:'2026-07-15', status:'pending'   },
+  // ── 支出结构补充明细（17类科目覆盖） ──
+  { id:'CE-060', projectId:'PROJ-001', date:'2026-04-05', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:490000,  amountCny:490000,  counterpart:'MMM原材料贸易（广州）有限公司', dueDate:null, status:'confirmed' },
+  { id:'CE-061', projectId:'PROJ-001', date:'2026-04-30', type:'expense', subtype:'增值税',         direction:'out', currency:'CNY', amount:330000,  amountCny:330000,  counterpart:'肇庆市税务局',                   dueDate:null, status:'confirmed' },
+  { id:'CE-062', projectId:'PROJ-001', date:'2026-05-10', type:'expense', subtype:'关税及其他',     direction:'out', currency:'CNY', amount:200000,  amountCny:200000,  counterpart:'肇庆海关',                       dueDate:null, status:'confirmed' },
+  { id:'CE-063', projectId:'PROJ-002', date:'2026-03-15', type:'expense', subtype:'员工福利',       direction:'out', currency:'CNY', amount:530000,  amountCny:530000,  counterpart:'布宜诺斯艾利斯员工福利服务公司', dueDate:null, status:'confirmed' },
+  { id:'CE-064', projectId:'PROJ-002', date:'2026-04-05', type:'expense', subtype:'业务宣传费',     direction:'out', currency:'CNY', amount:350000,  amountCny:350000,  counterpart:'NNN广告传媒有限公司',           dueDate:null, status:'confirmed' },
+  { id:'CE-065', projectId:'PROJ-002', date:'2026-05-20', type:'expense', subtype:'办公费',         direction:'out', currency:'CNY', amount:220000,  amountCny:220000,  counterpart:'布宜诺斯艾利斯办公用品供应商',   dueDate:null, status:'confirmed' },
+  { id:'CE-066', projectId:'PROJ-003', date:'2026-02-10', type:'expense', subtype:'培训费',         direction:'out', currency:'CNY', amount:190000,  amountCny:190000,  counterpart:'洛杉矶培训咨询公司',             dueDate:null, status:'confirmed' },
+  { id:'CE-067', projectId:'PROJ-003', date:'2026-03-15', type:'expense', subtype:'其他',           direction:'out', currency:'CNY', amount:130000,  amountCny:130000,  counterpart:'OOO综合服务有限公司',           dueDate:null, status:'confirmed' },
+  { id:'CE-068', projectId:'PROJ-003', date:'2026-04-20', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:80000,   amountCny:80000,   counterpart:'DDD输送设备（深圳）有限公司',    dueDate:null, status:'confirmed' },
+  { id:'CE-069', projectId:'PROJ-004', date:'2026-04-10', type:'expense', subtype:'差旅费',         direction:'out', currency:'CNY', amount:280000,  amountCny:280000,  counterpart:'携程商旅（企业版）',             dueDate:null, status:'confirmed' },
+  { id:'CE-070', projectId:'PROJ-004', date:'2026-05-15', type:'expense', subtype:'支付的各项税费', direction:'out', currency:'CNY', amount:180000,  amountCny:180000,  counterpart:'慕尼黑税务代理机构',             dueDate:null, status:'confirmed' },
+  { id:'CE-071', projectId:'PROJ-004', date:'2026-06-10', type:'expense', subtype:'员工福利',       direction:'out', currency:'CNY', amount:115000,  amountCny:115000,  counterpart:'慕尼黑员工福利服务公司',         dueDate:null, status:'confirmed' },
+  { id:'CE-072', projectId:'PROJ-005', date:'2025-09-15', type:'expense', subtype:'业务招待费',     direction:'out', currency:'CNY', amount:430000,  amountCny:430000,  counterpart:'曼谷四季酒店（企业接待）',       dueDate:null, status:'confirmed' },
+  { id:'CE-073', projectId:'PROJ-005', date:'2025-12-20', type:'expense', subtype:'通讯费',         direction:'out', currency:'CNY', amount:290000,  amountCny:290000,  counterpart:'泰国电信股份有限公司',           dueDate:null, status:'confirmed' },
+  { id:'CE-074', projectId:'PROJ-005', date:'2026-03-10', type:'expense', subtype:'培训费',         direction:'out', currency:'CNY', amount:180000,  amountCny:180000,  counterpart:'曼谷培训咨询公司',               dueDate:null, status:'confirmed' },
+  { id:'CE-075', projectId:'PROJ-006', date:'2026-05-20', type:'expense', subtype:'增值税',         direction:'out', currency:'CNY', amount:230000,  amountCny:230000,  counterpart:'上海市税务局',                   dueDate:null, status:'confirmed' },
+  { id:'CE-076', projectId:'PROJ-006', date:'2026-06-05', type:'expense', subtype:'关税及其他',     direction:'out', currency:'CNY', amount:150000,  amountCny:150000,  counterpart:'上海海关',                       dueDate:null, status:'confirmed' },
+  { id:'CE-077', projectId:'PROJ-006', date:'2026-06-25', type:'expense', subtype:'差旅费',         direction:'out', currency:'CNY', amount:95000,   amountCny:95000,   counterpart:'携程商旅（企业版）',             dueDate:null, status:'confirmed' },
+  { id:'CE-078', projectId:'PROJ-007', date:'2026-04-15', type:'expense', subtype:'业务宣传费',     direction:'out', currency:'CNY', amount:370000,  amountCny:370000,  counterpart:'PPP广告传媒有限公司',           dueDate:null, status:'confirmed' },
+  { id:'CE-079', projectId:'PROJ-007', date:'2026-05-10', type:'expense', subtype:'办公费',         direction:'out', currency:'CNY', amount:250000,  amountCny:250000,  counterpart:'圣保罗办公用品供应商',           dueDate:null, status:'confirmed' },
+  { id:'CE-080', projectId:'PROJ-007', date:'2026-06-20', type:'expense', subtype:'业务招待费',     direction:'out', currency:'CNY', amount:155000,  amountCny:155000,  counterpart:'圣保罗商务接待服务公司',         dueDate:null, status:'confirmed' },
+  { id:'CE-081', projectId:'PROJ-008', date:'2026-04-05', type:'expense', subtype:'其他',           direction:'out', currency:'CNY', amount:380000,  amountCny:380000,  counterpart:'QQQ综合服务有限公司',           dueDate:null, status:'confirmed' },
+  { id:'CE-082', projectId:'PROJ-008', date:'2026-05-01', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:255000,  amountCny:255000,  counterpart:'JJJ自动化设备（深圳）有限公司',  dueDate:null, status:'confirmed' },
+  { id:'CE-083', projectId:'PROJ-008', date:'2026-05-25', type:'expense', subtype:'增值税',         direction:'out', currency:'CNY', amount:160000,  amountCny:160000,  counterpart:'西雅图税务代理机构',             dueDate:null, status:'confirmed' },
+  { id:'CE-084', projectId:'PROJ-009', date:'2026-06-10', type:'expense', subtype:'支付的各项税费', direction:'out', currency:'CNY', amount:275000,  amountCny:275000,  counterpart:'鹿特丹税务代理机构',             dueDate:null, status:'confirmed' },
+  { id:'CE-085', projectId:'PROJ-009', date:'2026-06-25', type:'expense', subtype:'员工福利',       direction:'out', currency:'CNY', amount:180000,  amountCny:180000,  counterpart:'鹿特丹员工福利服务公司',         dueDate:null, status:'confirmed' },
+  { id:'CE-086', projectId:'PROJ-009', date:'2026-07-01', type:'expense', subtype:'业务宣传费',     direction:'out', currency:'CNY', amount:115000,  amountCny:115000,  counterpart:'RRR广告传媒有限公司',           dueDate:null, status:'confirmed' },
+  { id:'CE-087', projectId:'PROJ-010', date:'2026-05-20', type:'expense', subtype:'通讯费',         direction:'out', currency:'CNY', amount:155000,  amountCny:155000,  counterpart:'新加坡电信股份有限公司',         dueDate:null, status:'confirmed' },
+  { id:'CE-088', projectId:'PROJ-010', date:'2026-06-05', type:'expense', subtype:'培训费',         direction:'out', currency:'CNY', amount:105000,  amountCny:105000,  counterpart:'新加坡培训咨询公司',             dueDate:null, status:'confirmed' },
+  { id:'CE-089', projectId:'PROJ-010', date:'2026-06-15', type:'expense', subtype:'其他',           direction:'out', currency:'CNY', amount:65000,   amountCny:65000,   counterpart:'SSS综合服务有限公司',           dueDate:null, status:'confirmed' },
 ];
 
 const TODAY = new Date();

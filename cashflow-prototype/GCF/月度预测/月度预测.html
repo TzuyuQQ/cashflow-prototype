@@ -127,12 +127,9 @@
   .ytd-amounts { font-size:11.5px;color:#303133;margin-top:3px; }
   .ytd-amounts .ytd-now   { font-weight:600; }
   .ytd-amounts .ytd-total { color:#909399; }
-  .ytd-def-box { background:#f0f7ff;border:1px solid #bae0ff;border-radius:4px;padding:12px 16px;margin-top:14px; }
-  .ytd-def-box .def-title { font-size:12px;font-weight:700;color:#0958d9;margin-bottom:8px; }
-  .ytd-def-box .def-row { display:flex;gap:8px;margin-bottom:5px;align-items:flex-start; }
-  .ytd-def-box .def-row:last-child { margin-bottom:0; }
-  .ytd-def-box .def-label { font-size:11.5px;font-weight:600;color:#0958d9;white-space:nowrap;min-width:110px; }
-  .ytd-def-box .def-desc  { font-size:11.5px;color:#1677ff;line-height:1.55; }
+  .info-tip { display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#bfbfbf;color:#fff;font-size:9px;font-weight:700;font-style:italic;cursor:help;position:relative;margin-left:2px;vertical-align:middle;flex-shrink:0; }
+  .info-tip::after { content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;font-weight:400;font-style:normal;white-space:normal;width:420px;line-height:1.6;text-align:left;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:9999; }
+  .info-tip:hover::after { opacity:1; }
   </style>
 </head>
 <body>
@@ -164,8 +161,6 @@
       <a class="sidebar-nav-item" href="../项目列表/项目列表.html"><span class="sni-icon">📁</span>项目列表</a>
       <a class="sidebar-nav-item" href="../收支明细/收支明细.html"><span class="sni-icon">📋</span>收支明细</a>
       <a class="sidebar-nav-item active" href="#"><span class="sni-icon">📅</span>月度预测</a>
-      <a class="sidebar-nav-item" href="../应收账款/应收账款.html"><span class="sni-icon">💵</span>应收账款</a>
-      <a class="sidebar-nav-item" href="../应付账款/应付账款.html"><span class="sni-icon">💳</span>应付账款</a>
     </div>
   </div>
 
@@ -224,8 +219,15 @@
       <!-- Portfolio Monthly Chart -->
       <div class="card">
         <div class="card-title">
-          <span>组合月度收支趋势（滚动12个月）</span>
-          <span style="font-size:12px;color:#909399;">柱形=收入/支出，紫线=净现金流</span>
+          <span>组合月度收支趋势（{{ chartYear }}年 · 12个月）</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <el-button size="small" plain @click="prevYear">&#8592;</el-button>
+              <span style="font-size:13px;color:#303133;font-weight:500;min-width:48px;text-align:center;">{{ chartYear }}年</span>
+              <el-button size="small" plain @click="nextYear">&#8594;</el-button>
+            </div>
+            <span style="font-size:12px;color:#909399;">柱形=收入/支出，紫线=净现金流</span>
+          </div>
         </div>
         <div id="forecast-chart"></div>
       </div>
@@ -233,7 +235,7 @@
       <!-- Forecast Matrix -->
       <div class="card" style="padding:16px 20px;">
         <div class="card-title">
-          <span>月度收支预测矩阵（滚动12个月）</span>
+          <span>月度收支预测矩阵（{{ chartYear }}年 · 12个月）</span>
           <span style="font-size:12px;color:#909399;">单位：万元人民币 · 点击单元格查看明细</span>
         </div>
         <div class="forecast-scroll">
@@ -241,7 +243,7 @@
             <thead>
               <tr>
                 <th class="proj-col">项目</th>
-                <th v-for="m in MONTHS" :key="m.key" class="month-col" :class="m.isCurrent?'current-month':''">
+                <th v-for="m in activeMonths" :key="m.key" class="month-col" :class="m.isCurrent?'current-month':''">
                   <div class="month-label">{{ m.label }}</div>
                   <div class="month-sub" :class="m.isCurrent?'now':''">{{ m.sub }}</div>
                 </th>
@@ -261,7 +263,7 @@
                   </div>
                 </td>
                 <!-- Monthly data cells -->
-                <td v-for="m in MONTHS" :key="m.key" class="clickable-cell" @click="drillDown(proj.id, m.key)">
+                <td v-for="m in activeMonths" :key="m.key" class="clickable-cell" @click="drillDown(proj.id, m.key)">
                   <div class="data-cell"
                     :class="[m.isCurrent?'current-col':(m.isFuture?'future-col':''),
                              cellData(proj.id,m.key).hasAny?'has-activity':'']">
@@ -303,7 +305,7 @@
               <!-- Total row -->
               <tr style="background:#f5f7fa;">
                 <td><div class="proj-cell total-row"><div class="proj-name" style="color:#303133;">合　计</div></div></td>
-                <td v-for="m in MONTHS" :key="m.key">
+                <td v-for="m in activeMonths" :key="m.key">
                   <div class="data-cell total-row">
                     <div class="cell-inflow" v-if="colTotal(m.key).inflow">▲ {{ fmtCell(colTotal(m.key).inflow) }}</div>
                     <div class="cell-inflow-forecast" v-if="colTotal(m.key).inflowForecast">▲ {{ fmtCell(colTotal(m.key).inflowForecast) }} <span style="font-size:9px;background:#e6f4ff;color:#1677ff;padding:0 3px;border-radius:2px;">预</span></div>
@@ -333,7 +335,7 @@
       <!-- YTD Revenue & Cost Progress -->
       <div class="card" style="padding:16px 20px;">
         <div class="card-title">
-          <span>年初至今（YTD）收入与成本进度</span>
+          <span>年初至今（YTD）收入与成本进度 <span class="info-tip" data-tip="YTD 统计今年1月1日至今日、状态为已确认的实际收付记录，预测与待确认数据不计入">i</span></span>
           <span style="font-size:12px;color:#909399;">{{ _ytdStart }} 至今 · 仅已确认数据</span>
         </div>
         <table class="ytd-table">
@@ -341,8 +343,8 @@
             <tr>
               <th style="min-width:190px;">项目</th>
               <th style="min-width:70px;">状态</th>
-              <th style="min-width:220px;">收入进度（实际 YTD / 合同总额）</th>
-              <th style="min-width:220px;">成本进度（实际 YTD / 预算总额）</th>
+              <th style="min-width:140px;">收入进度 <span class="info-tip" data-tip="实际 YTD 已收款金额 ÷ 项目合同总金额，反映当年回款完成度，数值越高说明收款进度越快">i</span></th>
+              <th style="min-width:140px;">成本进度 <span class="info-tip" data-tip="实际 YTD 已发生成本 ÷ 项目预算总成本（示例数据）；若明显高于收入进度，说明成本消耗快于回款，存在资金垫付压力">i</span></th>
             </tr>
           </thead>
           <tbody>
@@ -404,29 +406,6 @@
           </tbody>
         </table>
 
-        <div class="ytd-def-box">
-          <div class="def-title">📖 字段说明</div>
-          <div class="def-row">
-            <span class="def-label">YTD（年初至今）</span>
-            <span class="def-desc">从今年1月1日至今日，已发生的实际收付记录（仅统计状态为"已确认"的条目，预测和待确认数据不计入）。</span>
-          </div>
-          <div class="def-row">
-            <span class="def-label">收入进度</span>
-            <span class="def-desc">YTD 实际已收款金额 ÷ 项目合同总金额。反映该项目当年的回款完成度，数值越高说明收款进度越快。</span>
-          </div>
-          <div class="def-row">
-            <span class="def-label">成本进度</span>
-            <span class="def-desc">YTD 实际已发生成本 ÷ 项目预算总成本。反映成本消耗速度。</span>
-          </div>
-          <div class="def-row">
-            <span class="def-label">⚠️ 风险信号</span>
-            <span class="def-desc">若某项目"成本进度 % 明显高于收入进度 %"，说明成本消耗速度快于回款速度，存在资金垫付压力，需重点关注。</span>
-          </div>
-          <div class="def-row">
-            <span class="def-label">* 预算总成本</span>
-            <span class="def-desc">当前为原型演示用示例数据，正式版本需对接公司实际预算系统后替换。</span>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -558,10 +537,20 @@ function fmtCellSigned(n) { const w=Math.abs(n)/10000; return (n<0?'-':'+')+(w>=
 const { createApp } = Vue;
 createApp({
   data() {
-    return { PROJECTS, MONTHS, STARTING_CASH, viewMode: 'all', selectedPm: '' };
+    return { PROJECTS, MONTHS, STARTING_CASH, viewMode: 'all', selectedPm: '', chartYear: _now.getFullYear() };
   },
   computed: {
     pmList() { return [...new Set(PROJECTS.map(p => p.pm))]; },
+    activeMonths() {
+      const now = _now;
+      return Array.from({length:12}, (_,i) => {
+        const y = this.chartYear, m = i + 1;
+        const key = `${y}-${String(m).padStart(2,'0')}`;
+        const isCurrent = y === now.getFullYear() && m === now.getMonth()+1;
+        const isFuture  = new Date(y, i, 1) > now;
+        return { key, label:`${m}月`, sub: isCurrent ? '当前月' : (isFuture ? 'T+'+i : ''), isCurrent, isFuture };
+      });
+    },
     scopeProjects() {
       return this.selectedPm ? PROJECTS.filter(p => p.pm === this.selectedPm) : PROJECTS;
     },
@@ -592,7 +581,7 @@ createApp({
            - me.filter(e=>e.direction==='out').reduce((s,e)=>s+e.amountCny,0);
     },
     grandTotal() {
-      const ents = this.scopeEntries.filter(e=>MONTHS.some(m=>m.key===e.date.slice(0,7)));
+      const ents = this.scopeEntries.filter(e=>this.activeMonths.some(m=>m.key===e.date.slice(0,7)));
       const confirmed = ents.filter(e=>e.status==='confirmed');
       const forecast  = ents.filter(e=>e.status==='pending'||e.status==='overdue');
       return {
@@ -644,10 +633,13 @@ createApp({
   mounted() { this.$nextTick(() => this.renderForecastChart()); },
   watch: {
     viewMode()   { this.renderForecastChart(); },
+    chartYear()  { this.$nextTick(() => this.renderForecastChart()); },
     selectedPm() { if (_forecastChart) { _forecastChart.dispose(); _forecastChart = null; } this.$nextTick(() => this.renderForecastChart()); },
   },
   methods: {
     fmtWan, fmtWanSigned, fmtCell, fmtCellSigned,
+    prevYear() { this.chartYear--; },
+    nextYear() { this.chartYear++; },
     stLabel(s) { return {active:'进行中','at-risk':'风险','on-hold':'暂停',completed:'已完成'}[s]??s; },
     stClass(s) { return {'active':'st-active','at-risk':'st-at-risk','on-hold':'st-on-hold','completed':'st-completed'}[s]??''; },
     onModeChange() {},
@@ -667,7 +659,7 @@ createApp({
                hasAny: !!(inflow||inflowForecast||outflow||outflowForecast) };
     },
     rowTotal(projectId) {
-      const me = this.scopeEntries.filter(e => e.projectId===projectId && MONTHS.some(m=>m.key===e.date.slice(0,7)));
+      const me = this.scopeEntries.filter(e => e.projectId===projectId && this.activeMonths.some(m=>m.key===e.date.slice(0,7)));
       const show = this.viewMode === 'all' ? me
         : this.viewMode === 'confirmed' ? me.filter(e=>e.status==='confirmed')
         : me.filter(e=>e.status==='pending'||e.status==='overdue');
@@ -693,17 +685,17 @@ createApp({
       const el = document.getElementById('forecast-chart');
       if (!el) return;
       if (!_forecastChart) _forecastChart = echarts.init(el);
-      const labels     = MONTHS.map(m => m.label);
-      const inflow     = MONTHS.map(m => this.colTotal(m.key).inflow / 10000);
-      const inflowF    = MONTHS.map(m => this.colTotal(m.key).inflowForecast / 10000);
-      const outflowN   = MONTHS.map(m => -this.colTotal(m.key).outflow / 10000);
-      const outflowFN  = MONTHS.map(m => -this.colTotal(m.key).outflowForecast / 10000);
-      const net        = MONTHS.map(m => +(this.colTotal(m.key).net / 10000).toFixed(1));
+      const labels     = this.activeMonths.map(m => m.label);
+      const inflow     = this.activeMonths.map(m => this.colTotal(m.key).inflow / 10000);
+      const inflowF    = this.activeMonths.map(m => this.colTotal(m.key).inflowForecast / 10000);
+      const outflowN   = this.activeMonths.map(m => -this.colTotal(m.key).outflow / 10000);
+      const outflowFN  = this.activeMonths.map(m => -this.colTotal(m.key).outflowForecast / 10000);
+      const net        = this.activeMonths.map(m => +(this.colTotal(m.key).net / 10000).toFixed(1));
 
       _forecastChart.off('click');
       _forecastChart.on('click', params => {
         if (params.componentType === 'series' && params.dataIndex !== undefined) {
-          window.location.href = '../收支明细/收支明细.html?month=' + MONTHS[params.dataIndex].key;
+          window.location.href = '../收支明细/收支明细.html?month=' + this.activeMonths[params.dataIndex].key;
         }
       });
 
@@ -718,16 +710,19 @@ createApp({
           return h;
         }},
         legend: { data:['收入(确认)','预测收入','支出(确认)','预测支出','净现金流'], top:4, right:0, textStyle:{ fontSize:10 } },
-        grid: { top:36, bottom:28, left:60, right:20 },
+        grid: { top:44, bottom:28, left:60, right:20 },
         xAxis: { type:'category', data:labels, axisLabel:{ color:'#909399', fontSize:11 }, axisLine:{ lineStyle:{ color:'#e4e7ed' } } },
-        yAxis: { type:'value', name:'万元', nameTextStyle:{ color:'#909399', fontSize:11 }, axisLabel:{ color:'#909399', fontSize:11, formatter: v => Math.abs(v) }, splitLine:{ lineStyle:{ color:'#f0f2f5' } } },
+        yAxis: { type:'value', name:'万元', nameLocation:'middle', nameTextStyle:{ color:'#909399', fontSize:11 }, axisLabel:{ color:'#909399', fontSize:11, formatter: v => Math.abs(v) }, splitLine:{ lineStyle:{ color:'#f0f2f5' } } },
         series: [
-          { name:'收入(确认)', type:'bar', stack:'in', data:inflow,   barMaxWidth:22, itemStyle:{ color:'#1677ff', borderRadius:[3,3,0,0] }, cursor:'pointer' },
-          { name:'预测收入',   type:'bar', stack:'in', data:inflowF,  barMaxWidth:22, itemStyle:{ color:'#91caff', borderRadius:[3,3,0,0] }, cursor:'pointer' },
-          { name:'支出(确认)', type:'bar', stack:'out',data:outflowN, barMaxWidth:22, itemStyle:{ color:'#ff7a00', borderRadius:[0,0,3,3] }, cursor:'pointer' },
-          { name:'预测支出',   type:'bar', stack:'out',data:outflowFN,barMaxWidth:22, itemStyle:{ color:'#ffc069', borderRadius:[0,0,3,3] }, cursor:'pointer' },
+          { name:'收入(确认)', type:'bar', stack:'in', data:inflow,   barMaxWidth:18, itemStyle:{ color:'#1677ff', borderRadius:[3,3,0,0] }, cursor:'pointer',
+            markLine:{ silent:true, symbol:'none', data:[{ xAxis:labels[0],
+              lineStyle:{ color:'rgba(250,140,22,0.85)', type:[5,4], width:1.5 },
+              label:{ formatter:'今', position:'insideEndTop', backgroundColor:'#fa8c16', color:'#fff', padding:[2,6,2,6], borderRadius:3, fontSize:10, fontWeight:700 } }] } },
+          { name:'预测收入',   type:'bar', stack:'in', data:inflowF,  barMaxWidth:18, itemStyle:{ color:'#91caff', borderRadius:[3,3,0,0] }, cursor:'pointer' },
+          { name:'支出(确认)', type:'bar', stack:'out',data:outflowN, barMaxWidth:18, itemStyle:{ color:'#ff7a00', borderRadius:[0,0,3,3] }, cursor:'pointer' },
+          { name:'预测支出',   type:'bar', stack:'out',data:outflowFN,barMaxWidth:18, itemStyle:{ color:'#ffc069', borderRadius:[0,0,3,3] }, cursor:'pointer' },
           { name:'净现金流', type:'line', data:net, smooth:true, symbol:'circle', symbolSize:5,
-            lineStyle:{ color:'#722ed1', width:2.5 }, itemStyle:{ color:'#722ed1' },
+            lineStyle:{ color:'#722ed1', width:2 }, itemStyle:{ color:'#722ed1' },
             label:{ show:true, position:'top', formatter: p=>`¥${p.value}万`, fontSize:10, color:'#722ed1', fontWeight:600 } },
         ],
       }, true);
