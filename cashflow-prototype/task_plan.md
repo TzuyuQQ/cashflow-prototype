@@ -5,8 +5,14 @@ A project-management cash flow prototype where every dollar is tied to a project
 Users navigate from the global portfolio dashboard → project list → project detail,
 with cross-project AR, AP, and monthly forecast views as supporting pages.
 
+**Target (as of the Payment Plan milestone):** a demo-ready prototype the user can walk stakeholders
+through, showing project-level cash health plus a PM-owned Payment Plan workflow that replaces ad-hoc
+`dueDate` guessing with an explicit, reviewable vendor payment forecast. All 10 seed projects should
+look realistic in the demo — populated data by default, with exactly one project intentionally shown
+in the empty "制定计划" state to demonstrate that flow too.
+
 ## Current Milestone
-**Milestone 2 — Project-Based MVP (7 pages)**
+**Milestone 3 — Payment Plan Feature** (Milestone 2 — Project-Based MVP — is done, see Phase 0-2 below)
 
 ## Acceptance Criteria
 - All pages open standalone in a browser with no build step
@@ -81,6 +87,39 @@ with cross-project AR, AP, and monthly forecast views as supporting pages.
 | CashEntry status | `confirmed` (已确认) / `pending` (待收/待付) / `overdue` (逾期) |
 | CashEntry direction | `in` (收入) / `out` (支出) |
 
+### Entity 4 — VendorPaymentCommitment (Milestone 3)
+```js
+{
+  id:               'VPC-001',
+  projectId:        'PROJ-001',          // a project can have 0, 1, or many commitments
+  vendor:           'TTT工程安装（上海）有限公司',
+  totalExpectedCny: 1000000,
+  currency:         'CNY',
+  notes:            '仓储自动化设备安装工程款，分期支付',
+  createdAt:        '2026-06-01',
+}
+```
+
+### Entity 5 — PaymentPlanPhase (Milestone 3)
+```js
+{
+  id:               'PPP-001',
+  commitmentId:     'VPC-001',           // sole link back to the commitment
+  projectId:        'PROJ-001',          // denormalized for cheap scope filtering
+  vendor:           'TTT工程安装（上海）有限公司',
+  phaseName:        '首期款（20%）',
+  plannedDate:      '2026-08-01',
+  plannedAmountCny: 200000,
+  plannedPct:       20,
+  status:           'planned',           // planned | replanned | completed | cancelled
+  notes:            '',
+  updatedAt:        '2026-06-01',
+}
+```
+Actual payments are plain `CashEntry` rows with an optional `commitmentId` field — the only link between
+an actual payment and a commitment (never matched by vendor name). Full business rules (review-reason
+triggers, forecast tiering) are in `findings.md`.
+
 ---
 
 ## Page Inventory
@@ -152,3 +191,37 @@ with cross-project AR, AP, and monthly forecast views as supporting pages.
 - [ ] Update sidebar HTML on all 7 pages so nav links are consistent
 - [ ] Confirm `?id=` routing works on project detail across browsers
 - [ ] Verify monetary formatting is consistent (¥X,XXX,XXX and ¥X,XXX万 cards)
+
+---
+
+## Milestone 3 — Payment Plan Feature ✅ DONE (pending user review)
+
+### Context
+Vendor payment forecasting was reading `CashEntry.dueDate`, which doesn't reflect what Finance actually
+intends to pay or when. Introduced `VendorPaymentCommitment` → `PaymentPlanPhase` (Entities 4-5 above) as
+the PM-owned source of truth for future vendor outflow, decoupled from actual confirmed payments.
+
+### Phase 4 — Core feature ✅ DONE
+- [x] `GCF/项目详情/项目详情.html`: Payment Plan card — commitment cards, phase CRUD, actual-payment
+  list, progress bar, review-reason alert, 重置演示数据 button
+- [x] `index.html`: 未来30天/7天内计划付款 alerts + KPI sourced from active phases (not `dueDate`);
+  付款计划待复核 alert panel; monthly chart outflow-forecast series sums active phases
+- [x] `GCF/月度预测/月度预测.html`: past/current/future month tiering (`monthTierFor`/
+  `outflowBreakdownFor`) so forecast columns use phases, not pending expense entries
+- [x] `GCF/收支明细/收支明细.html`: data-only — `commitmentId` field added, no logic/UI change
+- [x] Shared Payment Plan helper block kept byte-identical across the 3 pages that carry it
+
+### Phase 5 — Dashboard surfacing + demo-ready seed data ✅ DONE
+- [x] Expanded seed data from 1 commitment to all 10 projects, then enriched with 3 multi-commitment
+  cases (`PROJ-001`/`006`/`010`) and 1 deliberate zero-commitment case (`PROJ-004`, demos the empty
+  state) — see `findings.md` → "Seed data coverage"
+- [x] `index.html` 项目净现金流排名 table: 付款计划 column (progress bar + tooltip) + 制定计划/付款计划
+  action button routing to `项目详情.html#payment-plan`
+- [x] Fixed `PP_SCHEMA_VERSION` stale-`localStorage`-cache bug (bumped `1 → 2`) that was making the
+  dashboard look "mostly empty" despite the expanded seed data — see `findings.md` → "Stale-cache gotcha"
+- [x] Wrote `CLAUDE.md` (repo root) as an always-loaded primer for future sessions
+
+### What's left
+- [ ] User review of the whole Payment Plan feature — **no commit until approved**
+- [ ] Deferred, not started, only act if the user asks: extend 项目详情.html's own monthly chart with a
+  计划支出 series sourced from Payment Plan phases; add a v1.3 changelog entry to `GCF全局总览_prd.md`

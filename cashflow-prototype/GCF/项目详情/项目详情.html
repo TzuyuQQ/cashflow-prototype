@@ -95,6 +95,30 @@
     .st-pending   { color:#e6a23c; }
     .st-overdue   { color:#f56c6c;font-weight:600; }
     .pagination-bar { display:flex;justify-content:flex-end;padding-top:12px; }
+
+    /* Payment Plan */
+    .pp-toolbar { display:flex;justify-content:flex-end;gap:8px; }
+    .pp-empty { padding:32px;text-align:center;color:#909399;font-size:13px; }
+    .pp-commitment { border:1px solid #e4e7ed;border-radius:6px;padding:16px;margin-bottom:14px; }
+    .pp-commitment:last-child { margin-bottom:0; }
+    .pp-c-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px; }
+    .pp-c-vendor { font-size:15px;font-weight:600;color:#303133;display:flex;align-items:center;gap:8px; }
+    .pp-c-actions { display:flex;gap:6px; }
+    .pp-stats { display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap;align-items:center; }
+    .pp-stat-label { font-size:11px;color:#909399;margin-bottom:2px; }
+    .pp-stat-value { font-size:16px;font-weight:600;color:#303133; }
+    .pp-stat-value.paid { color:#52c41a; }
+    .pp-stat-value.remaining { color:#ff7a00; }
+    .pp-progress-wrap { flex:1;min-width:200px; }
+    .pp-review-badge { font-size:11px;padding:2px 8px;border-radius:10px;background:#fff2e8;color:#fa8c16;border:1px solid #ffd591;font-weight:500; }
+    .pp-review-alert { margin-bottom:12px; }
+    .pp-phase-toolbar { display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px; }
+    .pp-section-title { font-size:12px;font-weight:600;color:#606266; }
+    .ps-planned    { background:#e6f4ff;color:#1677ff; }
+    .ps-replanned  { background:#fff7e6;color:#e6a23c; }
+    .ps-completed  { background:#f6ffed;color:#52c41a; }
+    .ps-cancelled  { background:#f5f5f5;color:#909399;border:1px solid #d9d9d9; }
+    .pp-phase-past { color:#f56c6c;font-weight:600; }
   </style>
 </head>
 <body>
@@ -219,6 +243,154 @@
         <div v-else style="padding:20px;text-align:center;color:#909399;">暂无已确认支出记录</div>
       </div>
 
+      <!-- Payment Plan -->
+      <div class="card" id="payment-plan">
+        <div class="card-title">
+          <span>付款计划 <span class="info-tip" data-tip="按供应商付款承诺（Vendor Payment Commitment）管理未来分期付款计划。已付/未付余额/进度均只根据已通过 commitmentId 关联的已确认实付记录计算，绝不按供应商名称匹配；分期计划状态只能由项目经理手动修改，实付记录不会自动完成/减少/拆分/删除/改期任何分期">i</span></span>
+          <div class="pp-toolbar">
+            <el-button size="small" @click="resetDemoData">重置演示数据</el-button>
+            <el-button size="small" type="primary" @click="openAddCommitment">+ 新增付款承诺</el-button>
+          </div>
+        </div>
+
+        <div v-if="!projectCommitments.length" class="pp-empty">该项目暂无付款承诺，点击“新增付款承诺”开始创建付款计划。</div>
+
+        <div v-for="c in projectCommitments" :key="c.id" class="pp-commitment">
+          <div class="pp-c-header">
+            <div class="pp-c-vendor">
+              {{ c.vendor }}
+              <span v-if="c.reviewReasons.length" class="pp-review-badge">⚠ 需复核（{{ c.reviewReasons.length }}）</span>
+            </div>
+            <div class="pp-c-actions">
+              <el-button size="small" @click="openEditCommitment(c)">编辑</el-button>
+              <el-tooltip v-if="c.actualPaidCny > 0" content="该付款承诺已有实付记录，无法删除" placement="top">
+                <el-button size="small" type="danger" plain disabled>删除</el-button>
+              </el-tooltip>
+              <el-popconfirm v-else title="删除该付款承诺将同时删除其所有分期计划，确认删除？" @confirm="deleteCommitment(c.id)">
+                <template #reference><el-button size="small" type="danger" plain>删除</el-button></template>
+              </el-popconfirm>
+            </div>
+          </div>
+
+          <el-alert v-if="c.reviewReasons.length" type="warning" :closable="false" show-icon class="pp-review-alert">
+            <template #title>付款计划需要复核</template>
+            <div v-for="(r,ri) in c.reviewReasons" :key="ri" style="font-size:12px;">· {{ r }}</div>
+          </el-alert>
+
+          <div class="pp-stats">
+            <div>
+              <div class="pp-stat-label">预计总额</div>
+              <div class="pp-stat-value">{{ fmtCny(c.totalExpectedCny) }}</div>
+            </div>
+            <div>
+              <div class="pp-stat-label">实付（按 commitmentId 关联）</div>
+              <div class="pp-stat-value paid">{{ fmtCny(c.actualPaidCny) }}</div>
+            </div>
+            <div>
+              <div class="pp-stat-label">未付余额</div>
+              <div class="pp-stat-value remaining">{{ fmtCny(c.remainingUnpaidCny) }}</div>
+            </div>
+            <div class="pp-progress-wrap">
+              <div class="pp-stat-label">付款进度 {{ c.progressPct }}%</div>
+              <el-progress :percentage="Math.min(c.progressPct,100)" :color="c.progressPct>100?'#f56c6c':'#1677ff'" :stroke-width="10"></el-progress>
+            </div>
+          </div>
+
+          <div class="pp-phase-toolbar">
+            <span class="pp-section-title">分期付款计划</span>
+            <el-button size="small" @click="openAddPhase(c.id)">+ 新增分期</el-button>
+          </div>
+          <el-table :data="c.phases" size="small" border
+            :header-cell-style="{ background:'#f5f7fa', color:'#606266', fontWeight:'600', fontSize:'12px' }"
+            :cell-style="{ fontSize:'12px' }">
+            <el-table-column label="阶段名称" prop="phaseName" min-width="120"></el-table-column>
+            <el-table-column label="计划付款日期" width="140">
+              <template #default="{ row }">
+                <span :class="{ 'pp-phase-past': isPastDue(row) }">{{ row.plannedDate }}<span v-if="isPastDue(row)"> ⚠</span></span>
+              </template>
+            </el-table-column>
+            <el-table-column label="计划金额" width="120" align="right">
+              <template #default="{ row }">{{ fmtCny(row.plannedAmountCny) }}</template>
+            </el-table-column>
+            <el-table-column label="占比" width="70" align="right">
+              <template #default="{ row }">{{ row.plannedPct }}%</template>
+            </el-table-column>
+            <el-table-column label="状态" width="150" align="center">
+              <template #default="{ row }">
+                <span class="type-badge" :class="'ps-' + row.status">{{ phaseStatusLabel(row.status) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" min-width="120" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.notes || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="110" align="center">
+              <template #default="{ row }">
+                <el-button size="small" text type="primary" @click="openEditPhase(row)">编辑</el-button>
+                <el-popconfirm title="确认删除该分期？" @confirm="deletePhase(row.id)">
+                  <template #reference><el-button size="small" text type="danger">删除</el-button></template>
+                </el-popconfirm>
+              </template>
+            </el-table-column>
+            <template #empty>暂无分期计划</template>
+          </el-table>
+
+          <div class="pp-phase-toolbar" style="margin-top:14px;">
+            <span class="pp-section-title">实付记录（已确认，按 commitmentId 关联）<span style="font-size:11px;color:#909399;font-weight:400;margin-left:6px;">只读 · 数据来自已确认支出记录，不可在此编辑</span></span>
+          </div>
+          <el-table :data="c.actualPayments" size="small" border
+            :header-cell-style="{ background:'#f5f7fa', color:'#606266', fontWeight:'600', fontSize:'12px' }"
+            :cell-style="{ fontSize:'12px' }">
+            <el-table-column label="日期" prop="date" width="110"></el-table-column>
+            <el-table-column label="金额" width="120" align="right">
+              <template #default="{ row }">{{ fmtCny(row.amountCny) }}</template>
+            </el-table-column>
+            <el-table-column label="收款方/对方" min-width="140">
+              <template #default="{ row }">{{ row.counterpart }}</template>
+            </el-table-column>
+            <el-table-column label="单据号" width="100">
+              <template #default="{ row }">{{ row.id }}</template>
+            </el-table-column>
+            <template #empty>暂无已确认实付记录</template>
+          </el-table>
+        </div>
+
+        <!-- Commitment Dialog -->
+        <el-dialog v-model="commitmentDialogVisible" :title="editingCommitmentId ? '编辑付款承诺' : '新增付款承诺'" width="440px">
+          <el-form label-width="100px" size="small">
+            <el-form-item label="供应商"><el-input v-model="commitmentForm.vendor" placeholder="供应商名称"></el-input></el-form-item>
+            <el-form-item label="预计总额（¥）"><el-input-number v-model="commitmentForm.totalExpectedCny" :min="0" :step="10000" style="width:100%;"></el-input-number></el-form-item>
+            <el-form-item label="备注"><el-input v-model="commitmentForm.notes" type="textarea" :rows="2"></el-input></el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="commitmentDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="saveCommitment">保存</el-button>
+          </template>
+        </el-dialog>
+
+        <!-- Phase Dialog -->
+        <el-dialog v-model="phaseDialogVisible" :title="editingPhaseId ? '编辑分期计划' : '新增分期计划'" width="440px">
+          <el-form label-width="110px" size="small">
+            <el-form-item label="阶段名称"><el-input v-model="phaseForm.phaseName" placeholder="如：首期款"></el-input></el-form-item>
+            <el-form-item label="计划付款日期"><el-date-picker v-model="phaseForm.plannedDate" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item>
+            <el-form-item label="计划金额（¥）"><el-input-number v-model="phaseForm.plannedAmountCny" :min="0" :step="10000" style="width:100%;"></el-input-number></el-form-item>
+            <el-form-item label="计划占比（%）"><el-input-number v-model="phaseForm.plannedPct" :min="0" :max="100" style="width:100%;"></el-input-number></el-form-item>
+            <el-form-item label="状态">
+              <el-select v-model="phaseForm.status" style="width:100%;">
+                <el-option label="已计划" value="planned"></el-option>
+                <el-option label="已重新计划" value="replanned"></el-option>
+                <el-option label="已完成（仅项目经理手动选择）" value="completed"></el-option>
+                <el-option label="已取消" value="cancelled"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="备注"><el-input v-model="phaseForm.notes" type="textarea" :rows="2"></el-input></el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="phaseDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="savePhase">保存</el-button>
+          </template>
+        </el-dialog>
+      </div>
+
       <!-- Entries Table -->
       <div class="card">
         <div class="card-title"><span>收支明细</span></div>
@@ -229,7 +401,7 @@
           <el-tab-pane label="支出记录" name="expense"></el-tab-pane>
         </el-tabs>
         <el-table
-          :data="tabEntries"
+          :data="pagedTabEntries"
           border
           style="width:100%;margin-top:4px;"
           :header-cell-style="{ background:'#f5f7fa', color:'#606266', fontWeight:'600', fontSize:'13px' }"
@@ -279,7 +451,7 @@
         </el-table>
         <div class="pagination-bar">
           <el-pagination background layout="total, prev, pager, next"
-            :total="tabEntries.length" :page-size="10" :current-page="1">
+            :total="tabEntries.length" v-model:page-size="entriesPageSize" v-model:current-page="entriesPage">
           </el-pagination>
         </div>
       </div>
@@ -322,14 +494,14 @@ const CASH_ENTRIES = [
   { id:'CE-010', projectId:'PROJ-002', date:'2026-02-01', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2550000, amountCny:2550000, counterpart:'Unilever Argentina S.A.',   dueDate:'2026-02-20', status:'confirmed' },
   { id:'CE-011', projectId:'PROJ-002', date:'2026-02-22', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2550000, amountCny:2550000, counterpart:'Unilever Argentina S.A.',   dueDate:null,         status:'confirmed' },
   { id:'CE-012', projectId:'PROJ-002', date:'2026-04-15', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2125000, amountCny:2125000, counterpart:'Unilever Argentina S.A.',   dueDate:'2026-05-15', status:'overdue'   },
-  { id:'CE-013', projectId:'PROJ-002', date:'2026-03-10', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:3400000, amountCny:3400000, counterpart:'CCC物流设备有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-013', projectId:'PROJ-002', date:'2026-03-10', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:3400000, amountCny:3400000, counterpart:'CCC物流设备有限公司',        dueDate:null,         status:'confirmed', commitmentId:'VPC-002' },
   { id:'CE-014', projectId:'PROJ-002', date:'2026-04-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'布宜诺斯艾利斯劳务公司',      dueDate:null,         status:'confirmed' },
   { id:'CE-015', projectId:'PROJ-002', date:'2026-05-05', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:340000,  amountCny:340000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
   { id:'CE-016', projectId:'PROJ-002', date:'2026-07-05', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:850000,  amountCny:850000,  counterpart:'CCC物流设备有限公司',        dueDate:'2026-07-05', status:'pending'   },
   { id:'CE-017', projectId:'PROJ-003', date:'2025-12-18', type:'receipt', subtype:'合同首款', direction:'in',  currency:'USD', amount:230000,  amountCny:1680000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
   { id:'CE-018', projectId:'PROJ-003', date:'2026-03-22', type:'receipt', subtype:'进度款',   direction:'in',  currency:'USD', amount:153000,  amountCny:1120000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
   { id:'CE-019', projectId:'PROJ-003', date:'2026-06-26', type:'receipt', subtype:'进度款',   direction:'in',  currency:'USD', amount:246000,  amountCny:1800000, counterpart:'US Elogistics Inc.',        dueDate:null,         status:'confirmed' },
-  { id:'CE-020', projectId:'PROJ-003', date:'2026-01-15', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1120000, amountCny:1120000, counterpart:'DDD输送设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-020', projectId:'PROJ-003', date:'2026-01-15', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1120000, amountCny:1120000, counterpart:'DDD输送设备（深圳）有限公司', dueDate:null,         status:'confirmed', commitmentId:'VPC-003' },
   { id:'CE-021', projectId:'PROJ-003', date:'2026-04-10', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:185000,  amountCny:185000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
   { id:'CE-022', projectId:'PROJ-003', date:'2026-05-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:280000,  amountCny:280000,  counterpart:'洛杉矶工程服务公司',          dueDate:null,         status:'confirmed' },
   { id:'CE-023', projectId:'PROJ-003', date:'2026-08-01', type:'invoice', subtype:'验收款',   direction:'in',  currency:'USD', amount:230000,  amountCny:1680000, counterpart:'US Elogistics Inc.',        dueDate:'2026-08-15', status:'pending'   },
@@ -343,35 +515,35 @@ const CASH_ENTRIES = [
   { id:'CE-031', projectId:'PROJ-005', date:'2026-06-23', type:'receipt', subtype:'验收尾款', direction:'in',  currency:'THB', amount:13300000,amountCny:2720000, counterpart:'Lazada Thailand Co., Ltd',  dueDate:null,         status:'confirmed' },
   { id:'CE-032', projectId:'PROJ-005', date:'2025-08-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1400000, amountCny:1400000, counterpart:'FFF仓储设备有限公司',        dueDate:null,         status:'confirmed' },
   { id:'CE-033', projectId:'PROJ-005', date:'2025-12-10', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:680000,  amountCny:680000,  counterpart:'曼谷工程服务有限公司',        dueDate:null,         status:'confirmed' },
-  { id:'CE-034', projectId:'PROJ-005', date:'2026-05-15', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1360000, amountCny:1360000, counterpart:'GGG输送系统有限公司',        dueDate:null,         status:'confirmed' },
+  { id:'CE-034', projectId:'PROJ-005', date:'2026-05-15', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1360000, amountCny:1360000, counterpart:'GGG输送系统有限公司',        dueDate:null,         status:'confirmed', commitmentId:'VPC-005' },
   { id:'CE-035', projectId:'PROJ-005', date:'2026-06-10', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:170000,  amountCny:170000,  counterpart:'中远海运货运代理有限公司',    dueDate:null,         status:'confirmed' },
   // ── PROJ-006 ─ 张三 / 京东物流 (上海仓储) ──
   { id:'CE-036', projectId:'PROJ-006', date:'2026-04-10', type:'invoice', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2850000, amountCny:2850000, counterpart:'京东物流股份有限公司',           dueDate:'2026-04-25', status:'confirmed' },
   { id:'CE-037', projectId:'PROJ-006', date:'2026-04-25', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2850000, amountCny:2850000, counterpart:'京东物流股份有限公司',           dueDate:null,         status:'confirmed' },
   { id:'CE-038', projectId:'PROJ-006', date:'2026-07-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1900000, amountCny:1900000, counterpart:'京东物流股份有限公司',           dueDate:'2026-07-20', status:'pending'   },
-  { id:'CE-039', projectId:'PROJ-006', date:'2026-04-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1500000, amountCny:1500000, counterpart:'HHH智能设备（苏州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-039', projectId:'PROJ-006', date:'2026-04-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1500000, amountCny:1500000, counterpart:'HHH智能设备（苏州）有限公司',   dueDate:null,         status:'confirmed', commitmentId:'VPC-006' },
   { id:'CE-040', projectId:'PROJ-006', date:'2026-05-15', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:380000,  amountCny:380000,  counterpart:'上海博睿人力资源有限公司',       dueDate:null,         status:'confirmed' },
   // ── PROJ-007 ─ 李四 / DHL Brazil (圣保罗物流中心) ──
   { id:'CE-041', projectId:'PROJ-007', date:'2026-03-18', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2160000, amountCny:2160000, counterpart:'DHL Supply Chain Brasil Ltda',  dueDate:null,         status:'confirmed' },
   { id:'CE-042', projectId:'PROJ-007', date:'2026-05-20', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1800000, amountCny:1800000, counterpart:'DHL Supply Chain Brasil Ltda',  dueDate:'2026-06-10', status:'overdue'   },
-  { id:'CE-043', projectId:'PROJ-007', date:'2026-03-25', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:2800000, amountCny:2800000, counterpart:'III仓储系统（广州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-043', projectId:'PROJ-007', date:'2026-03-25', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:2800000, amountCny:2800000, counterpart:'III仓储系统（广州）有限公司',   dueDate:null,         status:'confirmed', commitmentId:'VPC-007' },
   { id:'CE-044', projectId:'PROJ-007', date:'2026-05-08', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:320000,  amountCny:320000,  counterpart:'中远海运货运代理有限公司',       dueDate:null,         status:'confirmed' },
   { id:'CE-045', projectId:'PROJ-007', date:'2026-06-15', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:480000,  amountCny:480000,  counterpart:'圣保罗工程服务公司',             dueDate:'2026-07-05', status:'pending'   },
   // ── PROJ-008 ─ 王五 / Amazon US (西雅图自动化仓储) ──
   { id:'CE-046', projectId:'PROJ-008', date:'2026-03-10', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:3300000, amountCny:3300000, counterpart:'Amazon.com Services LLC',        dueDate:null,         status:'confirmed' },
   { id:'CE-047', projectId:'PROJ-008', date:'2026-05-15', type:'invoice', subtype:'里程碑款', direction:'in',  currency:'CNY', amount:2750000, amountCny:2750000, counterpart:'Amazon.com Services LLC',        dueDate:'2026-06-01', status:'overdue'   },
-  { id:'CE-048', projectId:'PROJ-008', date:'2026-03-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:2100000, amountCny:2100000, counterpart:'JJJ自动化设备（深圳）有限公司', dueDate:null,         status:'confirmed' },
+  { id:'CE-048', projectId:'PROJ-008', date:'2026-03-20', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:2100000, amountCny:2100000, counterpart:'JJJ自动化设备（深圳）有限公司', dueDate:null,         status:'confirmed', commitmentId:'VPC-008' },
   { id:'CE-049', projectId:'PROJ-008', date:'2026-04-28', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:650000,  amountCny:650000,  counterpart:'西雅图工程服务公司',             dueDate:null,         status:'confirmed' },
   { id:'CE-050', projectId:'PROJ-008', date:'2026-06-01', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:420000,  amountCny:420000,  counterpart:'KKK设备租赁（上海）有限公司',   dueDate:null,         status:'confirmed' },
   // ── PROJ-009 ─ 赵六 / Maersk (鹿特丹港口物流) ──
   { id:'CE-051', projectId:'PROJ-009', date:'2026-05-20', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:2640000, amountCny:2640000, counterpart:'Maersk Container Industry A/S',  dueDate:null,         status:'confirmed' },
   { id:'CE-052', projectId:'PROJ-009', date:'2026-08-01', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:2200000, amountCny:2200000, counterpart:'Maersk Container Industry A/S',  dueDate:'2026-08-20', status:'pending'   },
-  { id:'CE-053', projectId:'PROJ-009', date:'2026-05-28', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1760000, amountCny:1760000, counterpart:'EEE工业设备（广州）有限公司',   dueDate:null,         status:'confirmed' },
+  { id:'CE-053', projectId:'PROJ-009', date:'2026-05-28', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:1760000, amountCny:1760000, counterpart:'EEE工业设备（广州）有限公司',   dueDate:null,         status:'confirmed', commitmentId:'VPC-009' },
   { id:'CE-054', projectId:'PROJ-009', date:'2026-06-20', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:520000,  amountCny:520000,  counterpart:'鹿特丹工程服务有限公司',         dueDate:null,         status:'confirmed' },
   // ── PROJ-010 ─ 陈七 / Grab Singapore (新加坡仓库) ──
   { id:'CE-055', projectId:'PROJ-010', date:'2026-05-05', type:'receipt', subtype:'合同首款', direction:'in',  currency:'CNY', amount:1620000, amountCny:1620000, counterpart:'Grab Holdings Ltd',              dueDate:null,         status:'confirmed' },
   { id:'CE-056', projectId:'PROJ-010', date:'2026-07-15', type:'invoice', subtype:'进度款',   direction:'in',  currency:'CNY', amount:1350000, amountCny:1350000, counterpart:'Grab Holdings Ltd',              dueDate:'2026-07-30', status:'pending'   },
-  { id:'CE-057', projectId:'PROJ-010', date:'2026-05-12', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:980000,  amountCny:980000,  counterpart:'LLL仓储设备有限公司',            dueDate:null,         status:'confirmed' },
+  { id:'CE-057', projectId:'PROJ-010', date:'2026-05-12', type:'expense', subtype:'项目物料', direction:'out', currency:'CNY', amount:980000,  amountCny:980000,  counterpart:'LLL仓储设备有限公司',            dueDate:null,         status:'confirmed', commitmentId:'VPC-010' },
   { id:'CE-058', projectId:'PROJ-010', date:'2026-06-08', type:'expense', subtype:'项目实施',   direction:'out', currency:'CNY', amount:310000,  amountCny:310000,  counterpart:'新加坡工程服务公司',             dueDate:null,         status:'confirmed' },
   { id:'CE-059', projectId:'PROJ-010', date:'2026-07-05', type:'expense', subtype:'运费及其他',     direction:'out', currency:'CNY', amount:125000,  amountCny:125000,  counterpart:'中远海运货运代理有限公司',       dueDate:'2026-07-15', status:'pending'   },
   // ── 支出结构补充明细（17类科目覆盖） ──
@@ -383,7 +555,7 @@ const CASH_ENTRIES = [
   { id:'CE-065', projectId:'PROJ-002', date:'2026-05-20', type:'expense', subtype:'办公费',         direction:'out', currency:'CNY', amount:220000,  amountCny:220000,  counterpart:'布宜诺斯艾利斯办公用品供应商',   dueDate:null, status:'confirmed' },
   { id:'CE-066', projectId:'PROJ-003', date:'2026-02-10', type:'expense', subtype:'培训费',         direction:'out', currency:'CNY', amount:190000,  amountCny:190000,  counterpart:'洛杉矶培训咨询公司',             dueDate:null, status:'confirmed' },
   { id:'CE-067', projectId:'PROJ-003', date:'2026-03-15', type:'expense', subtype:'其他',           direction:'out', currency:'CNY', amount:130000,  amountCny:130000,  counterpart:'OOO综合服务有限公司',           dueDate:null, status:'confirmed' },
-  { id:'CE-068', projectId:'PROJ-003', date:'2026-04-20', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:80000,   amountCny:80000,   counterpart:'DDD输送设备（深圳）有限公司',    dueDate:null, status:'confirmed' },
+  { id:'CE-068', projectId:'PROJ-003', date:'2026-04-20', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:80000,   amountCny:80000,   counterpart:'DDD输送设备（深圳）有限公司',    dueDate:null, status:'confirmed', commitmentId:'VPC-003' },
   { id:'CE-069', projectId:'PROJ-004', date:'2026-04-10', type:'expense', subtype:'差旅费',         direction:'out', currency:'CNY', amount:280000,  amountCny:280000,  counterpart:'携程商旅（企业版）',             dueDate:null, status:'confirmed' },
   { id:'CE-070', projectId:'PROJ-004', date:'2026-05-15', type:'expense', subtype:'支付的各项税费', direction:'out', currency:'CNY', amount:180000,  amountCny:180000,  counterpart:'慕尼黑税务代理机构',             dueDate:null, status:'confirmed' },
   { id:'CE-071', projectId:'PROJ-004', date:'2026-06-10', type:'expense', subtype:'员工福利',       direction:'out', currency:'CNY', amount:115000,  amountCny:115000,  counterpart:'慕尼黑员工福利服务公司',         dueDate:null, status:'confirmed' },
@@ -397,7 +569,7 @@ const CASH_ENTRIES = [
   { id:'CE-079', projectId:'PROJ-007', date:'2026-05-10', type:'expense', subtype:'办公费',         direction:'out', currency:'CNY', amount:250000,  amountCny:250000,  counterpart:'圣保罗办公用品供应商',           dueDate:null, status:'confirmed' },
   { id:'CE-080', projectId:'PROJ-007', date:'2026-06-20', type:'expense', subtype:'业务招待费',     direction:'out', currency:'CNY', amount:155000,  amountCny:155000,  counterpart:'圣保罗商务接待服务公司',         dueDate:null, status:'confirmed' },
   { id:'CE-081', projectId:'PROJ-008', date:'2026-04-05', type:'expense', subtype:'其他',           direction:'out', currency:'CNY', amount:380000,  amountCny:380000,  counterpart:'QQQ综合服务有限公司',           dueDate:null, status:'confirmed' },
-  { id:'CE-082', projectId:'PROJ-008', date:'2026-05-01', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:255000,  amountCny:255000,  counterpart:'JJJ自动化设备（深圳）有限公司',  dueDate:null, status:'confirmed' },
+  { id:'CE-082', projectId:'PROJ-008', date:'2026-05-01', type:'expense', subtype:'生产物料',       direction:'out', currency:'CNY', amount:255000,  amountCny:255000,  counterpart:'JJJ自动化设备（深圳）有限公司',  dueDate:null, status:'confirmed', commitmentId:'VPC-008' },
   { id:'CE-083', projectId:'PROJ-008', date:'2026-05-25', type:'expense', subtype:'增值税',         direction:'out', currency:'CNY', amount:160000,  amountCny:160000,  counterpart:'西雅图税务代理机构',             dueDate:null, status:'confirmed' },
   { id:'CE-084', projectId:'PROJ-009', date:'2026-06-10', type:'expense', subtype:'支付的各项税费', direction:'out', currency:'CNY', amount:275000,  amountCny:275000,  counterpart:'鹿特丹税务代理机构',             dueDate:null, status:'confirmed' },
   { id:'CE-085', projectId:'PROJ-009', date:'2026-06-25', type:'expense', subtype:'员工福利',       direction:'out', currency:'CNY', amount:180000,  amountCny:180000,  counterpart:'鹿特丹员工福利服务公司',         dueDate:null, status:'confirmed' },
@@ -405,6 +577,8 @@ const CASH_ENTRIES = [
   { id:'CE-087', projectId:'PROJ-010', date:'2026-05-20', type:'expense', subtype:'通讯费',         direction:'out', currency:'CNY', amount:155000,  amountCny:155000,  counterpart:'新加坡电信股份有限公司',         dueDate:null, status:'confirmed' },
   { id:'CE-088', projectId:'PROJ-010', date:'2026-06-05', type:'expense', subtype:'培训费',         direction:'out', currency:'CNY', amount:105000,  amountCny:105000,  counterpart:'新加坡培训咨询公司',             dueDate:null, status:'confirmed' },
   { id:'CE-089', projectId:'PROJ-010', date:'2026-06-15', type:'expense', subtype:'其他',           direction:'out', currency:'CNY', amount:65000,   amountCny:65000,   counterpart:'SSS综合服务有限公司',           dueDate:null, status:'confirmed' },
+  // ── Vendor Payment Commitment worked example: actual payment linked via commitmentId ──
+  { id:'CE-090', projectId:'PROJ-001', date:'2026-07-08', type:'expense', subtype:'项目实施', direction:'out', currency:'CNY', amount:100000, amountCny:100000, counterpart:'TTT工程安装（上海）有限公司', dueDate:null, status:'confirmed', commitmentId:'VPC-001' },
 ];
 /* ─── Helpers ─── */
 function sumAmt(arr) { return arr.reduce((s,e)=>s+e.amountCny,0); }
@@ -414,6 +588,134 @@ function fmtCny(n) { return '¥'+Math.abs(n).toLocaleString(); }
 
 function getIdFromUrl() {
   return new URLSearchParams(window.location.search).get('id') || 'PROJ-001';
+}
+
+/* ─── Payment Plan (Vendor Payment Commitments) ───
+   Shared verbatim across index.html / 项目详情.html / 月度预测.html so localStorage
+   reads/writes use identical keys & schema. Only 收支明细.html is excluded (its
+   business logic must stay unchanged; it only carries the commitmentId data field). */
+const PP_SCHEMA_VERSION = 2;
+const PP_KEYS = { version:'gcf_pp_schema_version', commitments:'gcf_pp_commitments', phases:'gcf_pp_phases' };
+const PP_TOLERANCE_CNY = 1;
+
+const DEFAULT_VENDOR_PAYMENT_COMMITMENTS = [
+  { id:'VPC-001', projectId:'PROJ-001', vendor:'TTT工程安装（上海）有限公司', totalExpectedCny:1000000, currency:'CNY', notes:'仓储自动化设备安装工程款，分期支付', createdAt:'2026-06-01' },
+  { id:'VPC-002', projectId:'PROJ-002', vendor:'CCC物流设备有限公司', totalExpectedCny:4000000, currency:'CNY', notes:'仓储物流设备采购款，分期支付', createdAt:'2026-03-01' },
+  { id:'VPC-003', projectId:'PROJ-003', vendor:'DDD输送设备（深圳）有限公司', totalExpectedCny:2000000, currency:'CNY', notes:'输送设备采购及安装款', createdAt:'2026-01-01' },
+  { id:'VPC-005', projectId:'PROJ-005', vendor:'GGG输送系统有限公司', totalExpectedCny:1700000, currency:'CNY', notes:'输送系统采购款', createdAt:'2026-05-01' },
+  { id:'VPC-006', projectId:'PROJ-006', vendor:'HHH智能设备（苏州）有限公司', totalExpectedCny:2000000, currency:'CNY', notes:'智能仓储设备采购款', createdAt:'2026-04-01' },
+  { id:'VPC-007', projectId:'PROJ-007', vendor:'III仓储系统（广州）有限公司', totalExpectedCny:3200000, currency:'CNY', notes:'仓储系统集成采购款', createdAt:'2026-03-01' },
+  { id:'VPC-008', projectId:'PROJ-008', vendor:'JJJ自动化设备（深圳）有限公司', totalExpectedCny:3000000, currency:'CNY', notes:'自动化设备采购款，分期支付', createdAt:'2026-03-01' },
+  { id:'VPC-009', projectId:'PROJ-009', vendor:'EEE工业设备（广州）有限公司', totalExpectedCny:2200000, currency:'CNY', notes:'工业设备采购款', createdAt:'2026-05-01' },
+  { id:'VPC-010', projectId:'PROJ-010', vendor:'LLL仓储设备有限公司', totalExpectedCny:1600000, currency:'CNY', notes:'仓储设备采购款，分期支付', createdAt:'2026-05-01' },
+  { id:'VPC-011', projectId:'PROJ-001', vendor:'安讯智能仓储设备（上海）有限公司', totalExpectedCny:600000, currency:'CNY', notes:'仓储货架及智能分拣设备采购款，与安装工程款分开核算', createdAt:'2026-06-20' },
+  { id:'VPC-012', projectId:'PROJ-006', vendor:'MMM安防科技（上海）有限公司', totalExpectedCny:450000, currency:'CNY', notes:'仓库安防监控系统采购及施工款', createdAt:'2026-07-01' },
+  { id:'VPC-013', projectId:'PROJ-010', vendor:'NNN消防工程（新加坡）有限公司', totalExpectedCny:380000, currency:'CNY', notes:'消防系统安装工程款', createdAt:'2026-07-05' },
+];
+const DEFAULT_PAYMENT_PLAN_PHASES = [
+  { id:'PPP-001', commitmentId:'VPC-001', projectId:'PROJ-001', vendor:'TTT工程安装（上海）有限公司', phaseName:'首期款（20%）', plannedDate:'2026-08-01', plannedAmountCny:200000, plannedPct:20, status:'planned', notes:'', updatedAt:'2026-06-01' },
+  { id:'PPP-002', commitmentId:'VPC-001', projectId:'PROJ-001', vendor:'TTT工程安装（上海）有限公司', phaseName:'二期款（20%）', plannedDate:'2026-09-01', plannedAmountCny:200000, plannedPct:20, status:'planned', notes:'', updatedAt:'2026-06-01' },
+  { id:'PPP-003', commitmentId:'VPC-001', projectId:'PROJ-001', vendor:'TTT工程安装（上海）有限公司', phaseName:'尾款（60%）',   plannedDate:'2026-10-01', plannedAmountCny:600000, plannedPct:60, status:'planned', notes:'', updatedAt:'2026-06-01' },
+  { id:'PPP-004', commitmentId:'VPC-002', projectId:'PROJ-002', vendor:'CCC物流设备有限公司', phaseName:'首期款（85%）', plannedDate:'2026-03-10', plannedAmountCny:3400000, plannedPct:85, status:'completed', notes:'', updatedAt:'2026-03-10' },
+  { id:'PPP-005', commitmentId:'VPC-002', projectId:'PROJ-002', vendor:'CCC物流设备有限公司', phaseName:'尾款（15%）', plannedDate:'2026-08-15', plannedAmountCny:600000, plannedPct:15, status:'planned', notes:'', updatedAt:'2026-07-01' },
+  { id:'PPP-006', commitmentId:'VPC-003', projectId:'PROJ-003', vendor:'DDD输送设备（深圳）有限公司', phaseName:'首期款（56%）', plannedDate:'2026-01-15', plannedAmountCny:1120000, plannedPct:56, status:'completed', notes:'', updatedAt:'2026-01-15' },
+  { id:'PPP-007', commitmentId:'VPC-003', projectId:'PROJ-003', vendor:'DDD输送设备（深圳）有限公司', phaseName:'补充款（4%）', plannedDate:'2026-04-20', plannedAmountCny:80000, plannedPct:4, status:'completed', notes:'', updatedAt:'2026-04-20' },
+  { id:'PPP-008', commitmentId:'VPC-003', projectId:'PROJ-003', vendor:'DDD输送设备（深圳）有限公司', phaseName:'尾款（25%）', plannedDate:'2026-07-01', plannedAmountCny:500000, plannedPct:25, status:'replanned', notes:'原计划日期已过，PM尚未更新新的付款日期', updatedAt:'2026-06-01' },
+  { id:'PPP-011', commitmentId:'VPC-005', projectId:'PROJ-005', vendor:'GGG输送系统有限公司', phaseName:'首期款（80%）', plannedDate:'2026-05-15', plannedAmountCny:1360000, plannedPct:80, status:'completed', notes:'', updatedAt:'2026-05-15' },
+  { id:'PPP-012', commitmentId:'VPC-005', projectId:'PROJ-005', vendor:'GGG输送系统有限公司', phaseName:'尾款（20%）', plannedDate:'2026-09-20', plannedAmountCny:340000, plannedPct:20, status:'planned', notes:'', updatedAt:'2026-07-05' },
+  { id:'PPP-013', commitmentId:'VPC-005', projectId:'PROJ-005', vendor:'GGG输送系统有限公司', phaseName:'尾款（原计划，已取消）', plannedDate:'2026-07-01', plannedAmountCny:340000, plannedPct:20, status:'cancelled', notes:'因供应商交付延期，原计划已取消，改为新尾款计划', updatedAt:'2026-06-01' },
+  { id:'PPP-014', commitmentId:'VPC-006', projectId:'PROJ-006', vendor:'HHH智能设备（苏州）有限公司', phaseName:'首期款（75%）', plannedDate:'2026-04-20', plannedAmountCny:1500000, plannedPct:75, status:'completed', notes:'', updatedAt:'2026-04-20' },
+  { id:'PPP-015', commitmentId:'VPC-006', projectId:'PROJ-006', vendor:'HHH智能设备（苏州）有限公司', phaseName:'尾款（25%）', plannedDate:'2026-08-25', plannedAmountCny:500000, plannedPct:25, status:'planned', notes:'', updatedAt:'2026-07-05' },
+  { id:'PPP-016', commitmentId:'VPC-007', projectId:'PROJ-007', vendor:'III仓储系统（广州）有限公司', phaseName:'首期款（88%）', plannedDate:'2026-03-25', plannedAmountCny:2800000, plannedPct:88, status:'completed', notes:'', updatedAt:'2026-03-25' },
+  { id:'PPP-017', commitmentId:'VPC-007', projectId:'PROJ-007', vendor:'III仓储系统（广州）有限公司', phaseName:'尾款（12%）', plannedDate:'2026-07-18', plannedAmountCny:400000, plannedPct:12, status:'planned', notes:'', updatedAt:'2026-07-01' },
+  { id:'PPP-018', commitmentId:'VPC-008', projectId:'PROJ-008', vendor:'JJJ自动化设备（深圳）有限公司', phaseName:'首期款（70%）', plannedDate:'2026-03-20', plannedAmountCny:2100000, plannedPct:70, status:'completed', notes:'', updatedAt:'2026-03-20' },
+  { id:'PPP-019', commitmentId:'VPC-008', projectId:'PROJ-008', vendor:'JJJ自动化设备（深圳）有限公司', phaseName:'补充款（9%）', plannedDate:'2026-05-01', plannedAmountCny:255000, plannedPct:9, status:'completed', notes:'', updatedAt:'2026-05-01' },
+  { id:'PPP-020', commitmentId:'VPC-008', projectId:'PROJ-008', vendor:'JJJ自动化设备（深圳）有限公司', phaseName:'尾款（10%）', plannedDate:'2026-09-01', plannedAmountCny:300000, plannedPct:10, status:'planned', notes:'计划金额低于剩余未付余额，待PM确认', updatedAt:'2026-07-10' },
+  { id:'PPP-021', commitmentId:'VPC-009', projectId:'PROJ-009', vendor:'EEE工业设备（广州）有限公司', phaseName:'首期款（80%）', plannedDate:'2026-05-28', plannedAmountCny:1760000, plannedPct:80, status:'completed', notes:'', updatedAt:'2026-05-28' },
+  { id:'PPP-022', commitmentId:'VPC-009', projectId:'PROJ-009', vendor:'EEE工业设备（广州）有限公司', phaseName:'尾款（20%）', plannedDate:'2026-10-15', plannedAmountCny:440000, plannedPct:20, status:'planned', notes:'', updatedAt:'2026-07-05' },
+  { id:'PPP-023', commitmentId:'VPC-010', projectId:'PROJ-010', vendor:'LLL仓储设备有限公司', phaseName:'首期款（61%）', plannedDate:'2026-05-12', plannedAmountCny:980000, plannedPct:61, status:'completed', notes:'', updatedAt:'2026-05-12' },
+  { id:'PPP-024', commitmentId:'VPC-010', projectId:'PROJ-010', vendor:'LLL仓储设备有限公司', phaseName:'尾款（39%）', plannedDate:'2026-08-05', plannedAmountCny:620000, plannedPct:39, status:'planned', notes:'', updatedAt:'2026-07-08' },
+  { id:'PPP-025', commitmentId:'VPC-011', projectId:'PROJ-001', vendor:'安讯智能仓储设备（上海）有限公司', phaseName:'首期款（50%）', plannedDate:'2026-09-15', plannedAmountCny:300000, plannedPct:50, status:'planned', notes:'', updatedAt:'2026-06-20' },
+  { id:'PPP-026', commitmentId:'VPC-011', projectId:'PROJ-001', vendor:'安讯智能仓储设备（上海）有限公司', phaseName:'尾款（50%）', plannedDate:'2026-11-01', plannedAmountCny:300000, plannedPct:50, status:'planned', notes:'', updatedAt:'2026-06-20' },
+  { id:'PPP-027', commitmentId:'VPC-012', projectId:'PROJ-006', vendor:'MMM安防科技（上海）有限公司', phaseName:'全款（100%）', plannedDate:'2026-10-01', plannedAmountCny:450000, plannedPct:100, status:'planned', notes:'', updatedAt:'2026-07-01' },
+  { id:'PPP-028', commitmentId:'VPC-013', projectId:'PROJ-010', vendor:'NNN消防工程（新加坡）有限公司', phaseName:'首期款（50%）', plannedDate:'2026-09-10', plannedAmountCny:190000, plannedPct:50, status:'planned', notes:'', updatedAt:'2026-07-05' },
+  { id:'PPP-029', commitmentId:'VPC-013', projectId:'PROJ-010', vendor:'NNN消防工程（新加坡）有限公司', phaseName:'尾款（50%）', plannedDate:'2026-11-20', plannedAmountCny:190000, plannedPct:50, status:'planned', notes:'', updatedAt:'2026-07-05' },
+];
+
+function isoDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function todayStr() { return isoDate(new Date()); }
+
+function loadPaymentPlanState() {
+  try {
+    const v = localStorage.getItem(PP_KEYS.version);
+    if (v === String(PP_SCHEMA_VERSION)) {
+      const commitments = JSON.parse(localStorage.getItem(PP_KEYS.commitments));
+      const phases = JSON.parse(localStorage.getItem(PP_KEYS.phases));
+      if (Array.isArray(commitments) && Array.isArray(phases)) return { commitments, phases };
+    }
+  } catch (e) { /* fall through to reseed */ }
+  const commitments = JSON.parse(JSON.stringify(DEFAULT_VENDOR_PAYMENT_COMMITMENTS));
+  const phases = JSON.parse(JSON.stringify(DEFAULT_PAYMENT_PLAN_PHASES));
+  savePaymentPlanState(commitments, phases);
+  return { commitments, phases };
+}
+function savePaymentPlanState(commitments, phases) {
+  localStorage.setItem(PP_KEYS.version, String(PP_SCHEMA_VERSION));
+  localStorage.setItem(PP_KEYS.commitments, JSON.stringify(commitments));
+  localStorage.setItem(PP_KEYS.phases, JSON.stringify(phases));
+}
+function resetPaymentPlanState() {
+  localStorage.removeItem(PP_KEYS.version);
+  localStorage.removeItem(PP_KEYS.commitments);
+  localStorage.removeItem(PP_KEYS.phases);
+  return loadPaymentPlanState();
+}
+
+function ppIsActivePhase(phase) { return phase.status === 'planned' || phase.status === 'replanned'; }
+function ppActualPaidCny(commitmentId, cashEntries) {
+  return cashEntries
+    .filter(e => e.commitmentId === commitmentId && e.type === 'expense' && e.direction === 'out' && e.status === 'confirmed')
+    .reduce((s, e) => s + e.amountCny, 0);
+}
+function ppRemainingUnpaidCny(commitment, cashEntries) {
+  return commitment.totalExpectedCny - ppActualPaidCny(commitment.id, cashEntries);
+}
+function ppProgressPct(commitment, cashEntries) {
+  if (!commitment.totalExpectedCny) return 0;
+  return Math.round(ppActualPaidCny(commitment.id, cashEntries) / commitment.totalExpectedCny * 1000) / 10;
+}
+function ppFutureActivePhases(commitmentId, phases, todayS) {
+  return phases.filter(p => p.commitmentId === commitmentId && ppIsActivePhase(p) && p.plannedDate >= todayS);
+}
+function ppPastDueActivePhases(commitmentId, phases, todayS) {
+  return phases.filter(p => p.commitmentId === commitmentId && ppIsActivePhase(p) && p.plannedDate < todayS);
+}
+function ppFuturePlannedTotalCny(commitmentId, phases, todayS) {
+  return ppFutureActivePhases(commitmentId, phases, todayS).reduce((s,p) => s + p.plannedAmountCny, 0);
+}
+function ppLatestPhaseUpdate(commitmentId, phases) {
+  return phases.filter(p => p.commitmentId === commitmentId).reduce((max,p) => (!max || p.updatedAt > max) ? p.updatedAt : max, null);
+}
+function ppLatestActualPaymentDate(commitmentId, cashEntries) {
+  return cashEntries.filter(e => e.commitmentId === commitmentId && e.type === 'expense' && e.direction === 'out' && e.status === 'confirmed')
+    .reduce((max,e) => (!max || e.date > max) ? e.date : max, null);
+}
+function ppReviewReasons(commitment, phases, cashEntries, todayS) {
+  const reasons = [];
+  const remaining = ppRemainingUnpaidCny(commitment, cashEntries);
+  const futureTotal = ppFuturePlannedTotalCny(commitment.id, phases, todayS);
+  if (futureTotal - remaining > PP_TOLERANCE_CNY) reasons.push('Future planned amount exceeds remaining unpaid amount');
+  else if (remaining - futureTotal > PP_TOLERANCE_CNY) reasons.push('Future planned amount is below remaining unpaid amount');
+  if (ppPastDueActivePhases(commitment.id, phases, todayS).length > 0) reasons.push('A planned payment date has passed');
+  const lastPhaseUpdate = ppLatestPhaseUpdate(commitment.id, phases);
+  const lastPayment = ppLatestActualPaymentDate(commitment.id, cashEntries);
+  if (lastPayment && lastPhaseUpdate && lastPayment > lastPhaseUpdate) reasons.push('Actual payment occurred after the plan was last updated');
+  return reasons;
+}
+function ppFuturePlannedOutflowInRange(phases, projectIds, fromS, toS) {
+  return phases
+    .filter(p => ppIsActivePhase(p) && (!projectIds || projectIds.has(p.projectId)) && p.plannedDate >= fromS && p.plannedDate <= toS)
+    .reduce((s,p) => s + p.plannedAmountCny, 0);
 }
 
 let _chart = null;
@@ -430,16 +732,52 @@ createApp({
       totalExpenses:  sumAmt(entries.filter(e => e.type==='expense' && e.direction==='out' && e.status==='confirmed')),
       get netCash() { return this.totalCollected - this.totalExpenses; },
     } : {};
-    return { project, entries, summary, activeTab: 'all', chartMode: 'grouped', chartYear: new Date().getFullYear() };
+    const { commitments, phases } = loadPaymentPlanState();
+    return {
+      project, entries, summary, activeTab: 'all', chartMode: 'grouped', chartYear: new Date().getFullYear(),
+      entriesPage: 1, entriesPageSize: 10,
+      commitments, phases,
+      commitmentDialogVisible: false, editingCommitmentId: null, commitmentForm: { vendor:'', totalExpectedCny:0, notes:'' },
+      phaseDialogVisible: false, editingPhaseId: null, _phaseCommitmentId: null,
+      phaseForm: { phaseName:'', plannedDate:todayStr(), plannedAmountCny:0, plannedPct:0, status:'planned', notes:'' },
+    };
   },
 
   computed: {
+    projectCommitments() {
+      if (!this.project) return [];
+      const todayS = todayStr();
+      return this.commitments
+        .filter(c => c.projectId === this.project.id)
+        .map(c => {
+          const cPhases = this.phases.filter(p => p.commitmentId === c.id).slice().sort((a,b)=>a.plannedDate.localeCompare(b.plannedDate));
+          const actualPayments = CASH_ENTRIES
+            .filter(e => e.commitmentId === c.id && e.type==='expense' && e.direction==='out' && e.status==='confirmed')
+            .slice().sort((a,b)=>a.date.localeCompare(b.date));
+          return {
+            ...c,
+            phases: cPhases,
+            actualPayments,
+            actualPaidCny: ppActualPaidCny(c.id, CASH_ENTRIES),
+            remainingUnpaidCny: ppRemainingUnpaidCny(c, CASH_ENTRIES),
+            progressPct: ppProgressPct(c, CASH_ENTRIES),
+            reviewReasons: ppReviewReasons(c, this.phases, CASH_ENTRIES, todayS),
+          };
+        });
+    },
     tabEntries() {
       if (this.activeTab === 'all') return this.entries;
       return this.entries.filter(e => e.type === this.activeTab);
     },
+    pagedTabEntries() {
+      const start = (this.entriesPage - 1) * this.entriesPageSize;
+      return this.tabEntries.slice(start, start + this.entriesPageSize);
+    },
     monthlyChart() {
-      const allMonths = [...new Set(this.entries.map(e => e.date.slice(0,7)))].sort()
+      const phaseMonths = this.phases
+        .filter(p => p.projectId === this.project.id && ppIsActivePhase(p))
+        .map(p => p.plannedDate.slice(0,7));
+      const allMonths = [...new Set([...this.entries.map(e => e.date.slice(0,7)), ...phaseMonths])].sort()
         .filter(ym => ym.split('-')[0] == this.chartYear);
       return allMonths.map(ym => {
         const [yr, mo] = ym.split('-').map(Number);
@@ -447,11 +785,13 @@ createApp({
           const d = new Date(e.date);
           return d.getFullYear()===yr && d.getMonth()+1===mo && e.status==='confirmed';
         });
+        const monthPhases = this.phases.filter(p => p.projectId === this.project.id && ppIsActivePhase(p) && p.plannedDate.slice(0,7) === ym);
         return {
           key:     ym,
           label:   mo+'月',
           inflow:  sumAmt(me.filter(e=>e.type==='receipt'&&e.direction==='in'))  / 10000,
           outflow: sumAmt(me.filter(e=>e.type==='expense'&&e.direction==='out')) / 10000,
+          outflowForecast: monthPhases.reduce((s,p)=>s+p.plannedAmountCny,0) / 10000,
         };
       });
     },
@@ -469,7 +809,14 @@ createApp({
     },
   },
 
-  mounted() { this.$nextTick(() => this.renderChart()); },
+  mounted() {
+    this.$nextTick(() => {
+      this.renderChart();
+      if (window.location.hash === '#payment-plan') {
+        document.getElementById('payment-plan')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  },
   watch: {
     chartMode()  { this.renderChart(); },
     chartYear()  { this.renderChart(); },
@@ -483,7 +830,80 @@ createApp({
     stClass(s) { return { active:'st-active','at-risk':'st-at-risk','on-hold':'st-on-hold',completed:'st-completed' }[s]??''; },
     typeLabel(t) { return { invoice:'开票', receipt:'回款', expense:'支出' }[t]??t; },
     statusLabel(s) { return { confirmed:'已确认', pending:'待处理', overdue:'逾期' }[s]??s; },
-    onTabChange() {},
+    onTabChange() { this.entriesPage = 1; },
+
+    phaseStatusLabel(s) { return { planned:'已计划', replanned:'已重新计划', completed:'已完成', cancelled:'已取消' }[s] ?? s; },
+    isPastDue(phase) { return ppIsActivePhase(phase) && phase.plannedDate < todayStr(); },
+    persistPP() { savePaymentPlanState(this.commitments, this.phases); },
+
+    openAddCommitment() {
+      this.editingCommitmentId = null;
+      this.commitmentForm = { vendor:'', totalExpectedCny:0, notes:'' };
+      this.commitmentDialogVisible = true;
+    },
+    openEditCommitment(c) {
+      this.editingCommitmentId = c.id;
+      this.commitmentForm = { vendor:c.vendor, totalExpectedCny:c.totalExpectedCny, notes:c.notes||'' };
+      this.commitmentDialogVisible = true;
+    },
+    saveCommitment() {
+      if (!this.commitmentForm.vendor) { ElementPlus.ElMessage.warning('请填写供应商名称'); return; }
+      if (this.editingCommitmentId) {
+        const c = this.commitments.find(x => x.id === this.editingCommitmentId);
+        Object.assign(c, { vendor:this.commitmentForm.vendor, totalExpectedCny:this.commitmentForm.totalExpectedCny, notes:this.commitmentForm.notes });
+      } else {
+        this.commitments.push({
+          id:'VPC-'+Date.now(), projectId:this.project.id, vendor:this.commitmentForm.vendor,
+          totalExpectedCny:this.commitmentForm.totalExpectedCny, currency:'CNY', notes:this.commitmentForm.notes, createdAt:todayStr(),
+        });
+      }
+      this.persistPP();
+      this.commitmentDialogVisible = false;
+    },
+    deleteCommitment(id) {
+      if (ppActualPaidCny(id, CASH_ENTRIES) > 0) {
+        ElementPlus.ElMessage.warning('该付款承诺已有实付记录，无法删除');
+        return;
+      }
+      this.commitments = this.commitments.filter(c => c.id !== id);
+      this.phases = this.phases.filter(p => p.commitmentId !== id);
+      this.persistPP();
+    },
+    openAddPhase(commitmentId) {
+      this.editingPhaseId = null;
+      this._phaseCommitmentId = commitmentId;
+      this.phaseForm = { phaseName:'', plannedDate:todayStr(), plannedAmountCny:0, plannedPct:0, status:'planned', notes:'' };
+      this.phaseDialogVisible = true;
+    },
+    openEditPhase(row) {
+      this.editingPhaseId = row.id;
+      this._phaseCommitmentId = row.commitmentId;
+      this.phaseForm = { phaseName:row.phaseName, plannedDate:row.plannedDate, plannedAmountCny:row.plannedAmountCny, plannedPct:row.plannedPct, status:row.status, notes:row.notes||'' };
+      this.phaseDialogVisible = true;
+    },
+    savePhase() {
+      if (!this.phaseForm.phaseName || !this.phaseForm.plannedDate) { ElementPlus.ElMessage.warning('请填写阶段名称和计划付款日期'); return; }
+      const nowS = todayStr();
+      if (this.editingPhaseId) {
+        const p = this.phases.find(x => x.id === this.editingPhaseId);
+        Object.assign(p, { ...this.phaseForm, updatedAt: nowS });
+      } else {
+        const commitment = this.commitments.find(c => c.id === this._phaseCommitmentId);
+        this.phases.push({ id:'PPP-'+Date.now(), commitmentId:this._phaseCommitmentId, projectId:commitment.projectId, vendor:commitment.vendor, ...this.phaseForm, updatedAt:nowS });
+      }
+      this.persistPP();
+      this.phaseDialogVisible = false;
+    },
+    deletePhase(id) {
+      this.phases = this.phases.filter(p => p.id !== id);
+      this.persistPP();
+    },
+    resetDemoData() {
+      const { commitments, phases } = resetPaymentPlanState();
+      this.commitments = commitments;
+      this.phases = phases;
+      ElementPlus.ElMessage.success('演示数据已重置');
+    },
 
     renderChart() {
       const el = document.getElementById('proj-chart');
@@ -493,7 +913,8 @@ createApp({
       const ymKeys     = this.monthlyChart.map(m => m.key);
       const inflow     = this.monthlyChart.map(m => m.inflow);
       const outflowNeg = this.monthlyChart.map(m => -m.outflow);
-      const net        = this.monthlyChart.map(m => +(m.inflow - m.outflow).toFixed(1));
+      const outflowForecastNeg = this.monthlyChart.map(m => -m.outflowForecast);
+      const net        = this.monthlyChart.map(m => +(m.inflow - m.outflow - m.outflowForecast).toFixed(1));
 
       const _now = new Date();
       const curKey = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
@@ -522,14 +943,15 @@ createApp({
         ...baseAxes,
         tooltip: { trigger:'axis', formatter: params => {
           let h = `<b>${params[0].axisValue}</b><br/>`;
-          params.forEach(p => { if (!p.value) return; const v = p.seriesName==='流出' ? Math.abs(p.value) : p.value; h += `${p.marker}${p.seriesName}：¥${v}万<br/>`; });
+          params.forEach(p => { if (!p.value) return; const v = ['流出','计划支出'].includes(p.seriesName) ? Math.abs(p.value) : p.value; h += `${p.marker}${p.seriesName}：¥${v}万<br/>`; });
           return h;
         }},
-        legend: { data:['流入','流出','净现金流'], top:4, right:0, textStyle:{ fontSize:10 } },
+        legend: { data:['流入','流出','计划支出','净现金流'], top:4, right:0, textStyle:{ fontSize:10 } },
         series: [
           { name:'流入',     type:'bar',  data:inflow,     barMaxWidth:18, itemStyle:{ color:'#1677ff', borderRadius:[3,3,0,0] }, cursor:'pointer',
             markLine:{ silent:true, symbol:'none', data:todayMark }, markArea:_shade },
-          { name:'流出',     type:'bar',  data:outflowNeg, barMaxWidth:18, itemStyle:{ color:'#ff7a00', borderRadius:[0,0,3,3] }, cursor:'pointer' },
+          { name:'流出',     type:'bar',  stack:'outflow', data:outflowNeg, barMaxWidth:18, itemStyle:{ color:'#ff7a00', borderRadius:[0,0,3,3] }, cursor:'pointer' },
+          { name:'计划支出', type:'bar',  stack:'outflow', data:outflowForecastNeg, barMaxWidth:18, itemStyle:{ color:'#ffc069', borderRadius:[0,0,3,3] }, cursor:'pointer' },
           { name:'净现金流', type:'line', data:net, smooth:true, symbol:'circle', symbolSize:5,
             lineStyle:{ color:'#722ed1', width:2 }, itemStyle:{ color:'#722ed1' },
             label:{ show:true, position:'top', formatter: p=>`¥${p.value}万`, fontSize:11, color:'#722ed1', fontWeight:600 } },
