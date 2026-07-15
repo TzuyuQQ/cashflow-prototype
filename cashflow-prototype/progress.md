@@ -222,3 +222,36 @@ commitments on purpose (empty-state demo case), not be filled in like the other 
 
 ### What's Next
 - User review of the whole Payment Plan feature (data + UI) — still no commit until explicitly approved.
+
+---
+
+## 2026-07-15 (Session — verification + AR/AP page removal)
+
+### Context
+User asked to "double check if every function is workable." Ran all 7 pages through a real headless
+Chromium (Node.js + a cached Playwright Chromium, both discovered to actually be available in this
+environment — see `CLAUDE.md`'s "Tech stack" section) rather than static code tracing. All 7 pages loaded
+with zero console/JS errors; interactively confirmed F5 (live-filter dropdowns on 项目列表), F2
+(pagination on both 项目列表 and 项目详情's entries tab), F7 (计划支出 forecast series on 项目详情's
+chart), F9 (滚动余额 legend removed from 月度预测), F11 (delete-guard disabling the button on commitments
+with actual payments), and the zero-commitment empty state on PROJ-004.
+
+While doing this, found that `GCF/应收账款/应收账款.html` and `GCF/应付账款/应付账款.html` (Steps 6/7,
+built in Session 2) had gone missing — 404 in the browser. Traced via git history to an unrelated
+prior-session cleanup commit that deleted them as collateral damage. Restored both from git history and
+re-verified they rendered correctly, then asked the user whether to commit the restoration.
+
+### Completed
+- Restored, then on user instruction **permanently removed** `GCF/应收账款/应收账款.html` and
+  `GCF/应付账款/应付账款.html` — the user clarified the deletion wasn't accidental in intent going
+  forward: those pages duplicate ledger views already covered by `收支明细.html`/`项目详情.html`, and
+  should stay gone. Confirmed no other page has dangling links/hrefs to either file before removing.
+- Updated `CLAUDE.md`: page inventory trimmed from 7 to 5 GCF pages, gotcha #5 rewritten to state the
+  pages no longer exist (and why), "Tech stack" section corrected to note Node.js/Playwright are
+  available (superseding the old "no runtime" claim).
+- Updated `task_plan.md`: page inventory table and Steps 6/7 annotated "(removed 2026-07-15)" rather than
+  rewriting the historical `[x]` — they were genuinely built and later removed, both true at different
+  times.
+
+### What's Next
+- None outstanding from this session; awaiting any further user direction.

@@ -131,8 +131,10 @@ triggers, forecast tiering) are in `findings.md`.
 | 3 | `GCF/项目详情/项目详情.html` | ✗ non-menu | Project drill-down (KPIs + chart + entries); driven by `?id=` |
 | 4 | `GCF/收支明细/收支明细.html` | ✓ 收支明细 | All entries across all projects, filterable by project |
 | 5 | `GCF/月度预测/月度预测.html` | ✓ 月度预测 | Rolling T→T+5 month net cash per project (row per project) |
-| 6 | `GCF/应收账款/应收账款.html` | ✓ 应收账款 | AR ledger across all projects — invoices + receipts |
-| 7 | `GCF/应付账款/应付账款.html` | ✓ 应付账款 | AP ledger across all projects — expenses + upcoming payments |
+
+*Steps 6/7 (`应收账款`/`应付账款` AR/AP ledger pages) were built, then removed on 2026-07-15 — the user
+judged them redundant with the breakdowns already in `收支明细.html`/`项目详情.html`. Not part of the
+current page set; don't recreate.*
 
 ---
 
@@ -176,16 +178,18 @@ triggers, forecast tiering) are in `findings.md`.
   - View mode toggle: 全部 / 已确认 / 待确认
   - KPI cards: T+3 expected inflow/outflow/net, current month confirmed net
 
-- [x] **Step 6:** `GCF/应收账款/应收账款.html`
+- [x] **Step 6 (removed 2026-07-15):** `GCF/应收账款/应收账款.html`
   - KPI cards: 已开票, 已回款, 逾期未收, 待收30天
   - Aging labels (逾期N天 / 还有N天 / 已收) with color badges
   - Filter: 项目, 类型 (发票/回款), 状态
+  - Removed as redundant with 收支明细.html/项目详情.html's own AR breakdowns — see progress.md.
 
-- [x] **Step 7:** `GCF/应付账款/应付账款.html`
+- [x] **Step 7 (removed 2026-07-15):** `GCF/应付账款/应付账款.html`
   - KPI cards: 已支出, 待付, 7天内到期
   - Due date urgency badges (到期提示)
   - 确认付款 action button on pending rows
   - Filter: 项目, 支出类型, 状态
+  - Removed as redundant with 收支明细.html/项目详情.html's own AP breakdowns — see progress.md.
 
 ### Phase 3 — Polish
 - [ ] Update sidebar HTML on all 7 pages so nav links are consistent
